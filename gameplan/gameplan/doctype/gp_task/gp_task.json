@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "taskid",
   "description",
   "start_date",
   "due_date",
@@ -105,11 +106,18 @@
    "fieldname": "comments_count",
    "fieldtype": "Int",
    "label": "Comments Count"
+  },
+  {
+   "fieldname": "taskid",
+   "fieldtype": "Data",
+   "label": "TaskID",
+   "read_only": 1
   }
  ],
+ "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-06-15 21:01:42.058336",
+ "modified": "2025-07-27 16:39:23.368003",
  "modified_by": "Administrator",
  "module": "Gameplan",
  "name": "GP Task",
@@ -164,6 +172,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

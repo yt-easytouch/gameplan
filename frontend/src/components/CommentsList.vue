@@ -133,6 +133,8 @@ const comments = useList<
     'name' | 'content' | 'owner' | 'creation' | 'modified' | 'deleted_at' | 'reactions'
   >
 >({
+  url: '/api/method/gameplan.api.proxy_document',
+  parent: 'GP Comment',
   doctype: 'GP Comment',
   cacheKey: ['Comments', props.doctype, props.name],
   fields: [

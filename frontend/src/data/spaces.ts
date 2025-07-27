@@ -22,6 +22,8 @@ export interface Space
 
 export let spaces = useList<Space>({
   doctype: 'GP Project',
+  url: '/api/method/gameplan.api.proxy_document',
+  parent: 'GP Project',
   fields: [
     'name',
     'title',

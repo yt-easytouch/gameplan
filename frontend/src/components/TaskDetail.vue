@@ -108,6 +108,53 @@
     </div>
     <div class="hidden w-[20rem] shrink-0 border-l sm:block">
       <div class="grid grid-cols-2 items-center gap-y-6 p-6 text-base text-ink-gray-6">
+        <div>Development</div>
+        <div>
+          <TextInput type="text"
+            v-model="task.doc.taskid" readonly>
+            <template #suffix>
+              <FeatherIcon
+                 class="w-4 cursor-pointer"
+                name="copy"
+                @click="copyTaskId"
+              />
+            </template>
+          </TextInput>
+
+           <!-- <div class="mt-2">
+            <Button
+              :variant="'solid'"
+              :ref_for="true"
+              theme="gray"
+              size="sm"
+              label="Button"
+              :loading="false"
+              :loadingText="null"
+              :disabled="false"
+              :link="null"
+            >
+              View Branch
+            </Button>
+            </div>
+          <div class="mt-2">
+            <Button
+              :variant="'solid'"
+              :ref_for="true"
+              theme="gray"
+              size="sm"
+              label="Button"
+              :loading="false"
+              :loadingText="null"
+              :disabled="false"
+              :link="null"
+            >
+              Create Pull Request
+            </Button>
+          </div> -->
+
+        </div>
+       
+
         <div>Assignee</div>
         <div>
           <Autocomplete
@@ -175,12 +222,13 @@ import CommentsList from '@/components/CommentsList.vue'
 import TaskStatusIcon from '@/components/NewTaskDialog/TaskStatusIcon.vue'
 import TaskPriorityIcon from '@/components/icons/TaskPriorityIcon.vue'
 import DropdownMoreOptions from './DropdownMoreOptions.vue'
-import { Autocomplete, Dropdown, LoadingText, DatePicker, Button, debounce } from 'frappe-ui'
+import { Autocomplete, Dropdown, LoadingText, DatePicker, Button, debounce , FeatherIcon , toast} from 'frappe-ui'
 import { vFocus } from '@/directives'
 import { activeUsers } from '@/data/users'
 import { useGroupedSpaceOptions } from '@/data/groupedSpaces'
 import { useTask } from '@/data/tasks'
 import { GPTask } from '@/types/doctypes'
+
 
 const props = defineProps<{
   taskId: string
@@ -247,6 +295,17 @@ function updateRoute() {
             taskId: task.doc.name,
           },
     })
+  }
+}
+const copyTaskId = () => {
+  if (task.doc.taskid) {
+      navigator.clipboard.writeText(task.doc.taskid)
+      .then(() => {
+        toast.success('Copied to clipboard!') // Or use alert if no toast plugin
+      })
+      .catch(() => {
+        toast.error('Failed to copy!')
+      })
   }
 }
 </script>

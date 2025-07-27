@@ -9,7 +9,7 @@ from gameplan.gameplan.doctype.gp_notification.gp_notification import GPNotifica
 from gameplan.mixins.activity import HasActivity
 from gameplan.mixins.mentions import HasMentions
 from gameplan.search_sqlite import GameplanSearch, GameplanSearchIndexMissingError
-
+import re
 
 class GPTask(HasMentions, HasActivity, Document):
 	on_delete_cascade = ["GP Comment", "GP Activity"]
@@ -20,6 +20,26 @@ class GPTask(HasMentions, HasActivity, Document):
 	def before_insert(self):
 		if not self.status:
 			self.status = "Backlog"
+		if self.project:
+			# Get project code
+			project_code = frappe.db.get_value("GP Project", self.project, "code")
+			if project_code:
+				clean_project = slugify(project_code)
+				clean_title = slugify(self.title)
+
+				# Get highest number for that project
+				last_number = frappe.db.sql("""
+					SELECT CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(taskid, '_', -2), '_', -1) AS UNSIGNED)
+					FROM `tabGP Task`
+					WHERE taskid LIKE %s
+					ORDER BY CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(taskid, '_', -2), '_', -1) AS UNSIGNED) DESC
+					LIMIT 1
+				""", (f"{clean_project}_%_{clean_title}",))
+
+				next_number = (last_number[0][0] + 1) if last_number else 1
+				padded_number = str(next_number).zfill(3)
+
+				self.taskid = f"{clean_project}_{padded_number}_{clean_title}"
 
 	def after_insert(self):
 		self.update_tasks_count()
@@ -110,3 +130,12 @@ def get_list(
 	data = query.run(as_dict=True, debug=debug)
 	frappe.response["has_next_page"] = len(data) > limit
 	return data[:limit]
+
+def slugify(text):
+	# Lowercase
+	text = text.lower()
+	# Replace spaces and dashes with underscore
+	text = re.sub(r'[\s\-]+', '_', text)
+	# Remove all non-word characters except underscores
+	text = re.sub(r'[^\w_]', '', text)
+	return text

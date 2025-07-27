@@ -8,6 +8,9 @@ from frappe.utils import cstr, split_emails, validate_email_address
 
 import gameplan
 from gameplan.utils import validate_type
+from frappe.utils.data import now
+from urllib.parse import unquote_plus
+import json
 
 
 @frappe.whitelist(allow_guest=True)
@@ -27,26 +30,34 @@ def get_user_info(user=None):
 		distinct=True,
 	).run(as_dict=1)
 
-	# Get discussion counts for last 3 months
-	Discussion = frappe.qb.DocType("GP Discussion")
-	discussion_counts = (
-		frappe.qb.from_(Discussion)
-		.select(Discussion.owner, Count(Discussion.name).as_("count"))
-		.where(Discussion.creation >= frappe.utils.add_months(frappe.utils.now(), -3))
-		.where(Discussion.owner.isin([u.name for u in users]))
-		.groupby(Discussion.owner)
-	).run(as_dict=1)
+	user_names = [u.name for u in users]
+	if user_names:
+		# Get discussion counts for last 3 months
+		Discussion = frappe.qb.DocType("GP Discussion")
+		discussion_counts = (
+			frappe.qb.from_(Discussion)
+			.select(Discussion.owner, Count(Discussion.name).as_("count"))
+			.where(Discussion.creation >= frappe.utils.add_months(frappe.utils.now(), -3))
+			.where(Discussion.owner.isin(user_names))
+			.groupby(Discussion.owner)
+		).run(as_dict=1)
+	else:
+		discussion_counts = []
 	discussion_count_map = {d.owner: d.count for d in discussion_counts}
+ 
 
 	# Get comment counts for last 3 months
 	Comment = frappe.qb.DocType("GP Comment")
-	comment_counts = (
-		frappe.qb.from_(Comment)
-		.select(Comment.owner, Count(Comment.name).as_("count"))
-		.where(Comment.creation >= frappe.utils.add_months(frappe.utils.now(), -3))
-		.where(Comment.owner.isin([u.name for u in users]))
-		.groupby(Comment.owner)
-	).run(as_dict=1)
+	if user_names:
+		comment_counts = (
+			frappe.qb.from_(Comment)
+			.select(Comment.owner, Count(Comment.name).as_("count"))
+			.where(Comment.creation >= frappe.utils.add_months(frappe.utils.now(), -3))
+			.where(Comment.owner.isin([u.name for u in users]))
+			.groupby(Comment.owner)
+		).run(as_dict=1)
+	else:
+		comment_counts = []
 	comment_count_map = {c.owner: c.count for c in comment_counts}
 
 	roles = frappe.db.get_all("Has Role", filters={"parenttype": "User"}, fields=["role", "parent"])
@@ -491,14 +502,14 @@ def get_search_filter_options():
 
 def can_access_gameplan():
 	"""Check if the app should be shown in /apps"""
-	from frappe.utils.modules import get_modules_from_all_apps_for_user
+	# from frappe.utils.modules import get_modules_from_all_apps_for_user
 
 	if frappe.session.user == "Administrator":
 		return True
 
-	allowed_modules = [x["module_name"] for x in get_modules_from_all_apps_for_user()]
-	if "Gameplan" not in allowed_modules:
-		return False
+	# allowed_modules = [x["module_name"] for x in get_modules_from_all_apps_for_user()]
+	# if "Gameplan" not in allowed_modules:
+	# 	return False
 
 	roles = set(frappe.get_roles())
 	allowed_roles = set(["System Manager", "Gameplan Admin", "Gameplan Member", "Gameplan Guest"])
@@ -506,3 +517,125 @@ def can_access_gameplan():
 		return True
 
 	return False
+
+@frappe.whitelist()
+def get_gp_projects_with_members():
+    projects = frappe.get_all("GP Project",
+        fields=[
+            "name",
+            "title",
+            "icon",
+            "team",
+            "archived_at",
+            "is_private",
+            "modified",
+            "tasks_count",
+            "discussions_count"
+        ],
+        order_by="title asc",
+        limit_page_length=99999
+    )
+
+    for project in projects:
+        members = frappe.get_all("GP Member",
+            filters={"parent": project["name"]},
+            fields=["user"]
+        )
+        project["members"] = members
+    
+    frappe.response.update({
+            "data": projects,
+        })
+
+
+@frappe.whitelist(allow_guest=False)
+def proxy_document():
+    """
+    Proxy API that supports dynamic nested linked child tables.
+    Automatically detects child doctype from DocField metadata.
+    """
+
+    # Get request params
+    doctype = frappe.form_dict.get("parent")
+    fields_param = frappe.form_dict.get("fields")
+    filters_param = frappe.form_dict.get("filters")
+    order_by = frappe.form_dict.get("order_by") or "creation asc"
+    start = int(frappe.form_dict.get("start") or 0)
+    limit = int(frappe.form_dict.get("limit") or 20)
+    
+
+    # Parse filters JSON string to dict
+    filters = {}
+    if filters_param:
+        try:
+            filters = json.loads(filters_param)
+        except Exception:
+            filters = {}
+
+    # Parse fields, separate main fields and child table requests
+    fields = []
+    child_fields_map = {}  # { child_fieldname: [list_of_fields] }
+
+    if fields_param:
+        try:
+            fields_list = json.loads(fields_param)
+        except Exception:
+            fields_list = []
+
+        for f in fields_list:
+            if isinstance(f, dict):
+                # Nested child fields found, e.g. {"reactions": ["name", "user", "emoji"]}
+                for child_fieldname, child_fields in f.items():
+                    child_fields_map[child_fieldname] = child_fields
+            else:
+                fields.append(f)
+    else:
+        fields = ["name"]
+
+    # Fetch main documents with main fields only
+    docs = frappe.get_all(
+        doctype,
+        fields=fields,
+        filters=filters,
+        order_by=order_by,
+        limit_start=start,
+        limit_page_length=limit,
+    )
+
+    def get_child_doctype(parent_doctype, child_fieldname):
+        """
+        Query DocField to find child doctype linked to parent_doctype and child_fieldname
+        """
+        return frappe.db.get_value(
+            "DocField",
+            {
+                "parent": parent_doctype,
+                "fieldname": child_fieldname,
+                "fieldtype": "Table"
+            },
+            "options"
+        )
+
+    # For each child field, fetch related child docs and attach
+    for child_fieldname, child_fields in child_fields_map.items():
+        child_doctype = get_child_doctype(doctype, child_fieldname)
+        if not child_doctype:
+            # Could not find child doctype for that fieldname, skip
+            continue
+
+        for doc in docs:
+            child_docs = frappe.get_all(
+                child_doctype,
+                fields=child_fields,
+                filters={
+                    "parent": doc["name"],
+                    "parentfield": child_fieldname,
+                    "parenttype": doctype,
+                },
+                order_by="creation asc",
+            )
+            doc[child_fieldname] = child_docs
+
+    frappe.response.update({
+            "data": docs,
+        })
