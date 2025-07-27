@@ -506,3 +506,30 @@ def can_access_gameplan():
 		return True
 
 	return False
+
+@frappe.whitelist()
+def get_gp_projects_with_members():
+    projects = frappe.get_all("GP Project",
+        fields=[
+            "name",
+            "title",
+            "icon",
+            "team",
+            "archived_at",
+            "is_private",
+            "modified",
+            "tasks_count",
+            "discussions_count"
+        ],
+        order_by="title asc",
+        limit_page_length=99999
+    )
+
+    for project in projects:
+        members = frappe.get_all("GP Project Member",
+            filters={"parent": project["name"]},
+            fields=["user"]
+        )
+        project["members"] = members
+
+    return projects

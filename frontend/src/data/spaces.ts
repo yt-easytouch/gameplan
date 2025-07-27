@@ -1,5 +1,5 @@
 import { computed, MaybeRefOrGetter, toValue } from 'vue'
-import { useCall, useList } from 'frappe-ui/src/data-fetching'
+import { useCall } from 'frappe-ui/src/data-fetching'
 import { GPProject, GPMember } from '@/types/doctypes'
 
 interface Member extends Pick<GPMember, 'user'> {}
@@ -20,24 +20,10 @@ export interface Space
   members: Member[]
 }
 
-export let spaces = useList<Space>({
-  doctype: 'GP Project',
-  fields: [
-    'name',
-    'title',
-    'icon',
-    'team',
-    'archived_at',
-    'is_private',
-    'modified',
-    'tasks_count',
-    'discussions_count',
-    { members: ['user'] },
-  ],
-  initialData: [],
-  orderBy: 'title asc',
-  limit: 99999,
+export const spaces = useCall<Space[]>({
+  url: '/api/method/gameplan.api.get_gp_projects_with_members',
   cacheKey: 'spaces',
+  initialData: [],
   transform(data) {
     for (let space of data) {
       space.name = space.name.toString()
@@ -52,9 +38,9 @@ export let spaces = useList<Space>({
 
 export function useSpace(name: MaybeRefOrGetter<string | undefined>) {
   return computed(() => {
-    let _name = toValue(name)
+    const _name = toValue(name)
     if (!_name) return null
-    return spaces.data?.find((space) => space.name.toString() === _name?.toString()) ?? null
+    return spaces.data?.find((space) => space.name.toString() === _name.toString()) ?? null
   })
 }
 
@@ -75,6 +61,6 @@ export const unreadCount = useCall<{ [spaceId: number]: number }>({
 })
 
 export function getSpaceUnreadCount(spaceId: string) {
-  let spaceIdInt = parseInt(spaceId)
+  const spaceIdInt = parseInt(spaceId)
   return unreadCount.data?.[spaceIdInt] ?? 0
 }
