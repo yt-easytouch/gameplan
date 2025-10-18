@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-18 09:40:07.989879",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "project",
+  "status",
+  "column_break_ltnf",
+  "start_date",
+  "end_date",
+  "section_break_olug",
+  "sprint_goal",
+  "section_break_derj",
+  "velocity_points",
+  "progress",
+  "notes",
+  "column_break_uysv",
+  "team",
+  "completed_points",
+  "burndown_chart",
+  "section_break_vobn",
+  "tasks"
+ ],
+ "fields": [
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "GP Project"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Planned\nActive\nCompleted\nCancelled"
+  },
+  {
+   "fieldname": "column_break_ltnf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "fieldname": "section_break_olug",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sprint_goal",
+   "fieldtype": "Small Text",
+   "label": "Sprint Goal"
+  },
+  {
+   "fieldname": "section_break_derj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "velocity_points",
+   "fieldtype": "Float",
+   "label": "Velocity Points"
+  },
+  {
+   "fieldname": "progress",
+   "fieldtype": "Percent",
+   "label": "Progress"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "column_break_uysv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "GP Team"
+  },
+  {
+   "fieldname": "completed_points",
+   "fieldtype": "Float",
+   "label": "Completed Points"
+  },
+  {
+   "fieldname": "burndown_chart",
+   "fieldtype": "Attach Image",
+   "label": "Burndown Chart"
+  },
+  {
+   "fieldname": "section_break_vobn",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "tasks",
+   "fieldtype": "Table",
+   "label": "Tasks",
+   "options": "Tasks"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-18 09:40:07.989879",
+ "modified_by": "Administrator",
+ "module": "Gameplan",
+ "name": "Sprint",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
