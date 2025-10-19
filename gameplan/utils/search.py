@@ -7,7 +7,12 @@ import json
 import frappe
 from frappe.utils import cstr
 from redis.commands.search.field import TagField, TextField
-from redis.commands.search.indexDefinition import IndexDefinition
+
+try:
+	from redis.commands.search.index_definition import IndexDefinition
+except ImportError:
+	from redis.commands.search.indexDefinition import IndexDefinition
+
 from redis.commands.search.query import Query
 from redis.exceptions import ResponseError
 
