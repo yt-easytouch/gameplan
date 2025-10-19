@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col">
+    <!-- Loading skeleton -->
     <div
       v-if="comments.data == null"
       class="flex animate-pulse items-start space-x-3 px-2 py-4 text-base"
@@ -10,7 +11,7 @@
           <div class="h-2 w-40 bg-surface-gray-3"></div>
         </div>
         <div class="flex flex-col gap-2">
-          <div v-for="i in 4">
+          <div v-for="i in 4" :key="i">
             <div
               class="h-2 bg-surface-gray-3"
               :style="{ width: `${Math.max(Math.random() * 800, 600)}px` }"
@@ -19,10 +20,12 @@
         </div>
       </div>
     </div>
+
+    <!-- Timeline -->
     <div :style="{ paddingBottom: `${addCommentHeight + 80}px` }">
       <template v-for="(item, i) in timelineItems" :key="item.doctype + item.name">
         <div
-          v-if="newMessagesFrom && newMessagesFrom == item.name"
+          v-if="newMessagesFrom && newMessagesFrom === item.name"
           class="relative mb-4 mt-15"
           role="separator"
         >
@@ -33,42 +36,40 @@
             New comments
           </span>
         </div>
+
         <Comment
-          v-if="item.doctype == 'GP Comment'"
+          v-if="item.doctype === 'GP Comment'"
           :ref="($comment) => setItemRef($comment, item)"
-          :comment="item"
-          :highlight="
-            highlightedItem?.doctype == item.doctype && highlightedItem?.name == item.name
-          "
+          :comment="item as GPComment"
+          :highlight="highlightedItem?.doctype === item.doctype && highlightedItem?.name === item.name"
           :readOnlyMode="readOnlyMode"
           :comments="comments"
-          @rich-quote="
-            $emit('rich-quote', $event, { id: `comment:${item.name}`, author: item.owner })
-          "
+          @rich-quote="$emit('rich-quote', $event, { id: `comment:${item.name}`, author: item.owner })"
           @rich-quote-click="$emit('rich-quote-click', $event)"
         />
+
         <Activity
+          v-else-if="item.doctype === 'GP Activity'"
           :class="[
             {
-              'pt-3': timelineItems[i - 1]?.doctype == 'GP Activity',
-              'pt-15': timelineItems[i - 1]?.doctype != 'GP Activity',
+              'pt-3': timelineItems[i - 1]?.doctype === 'GP Activity',
+              'pt-15': timelineItems[i - 1]?.doctype !== 'GP Activity',
             },
           ]"
-          v-else-if="item.doctype == 'GP Activity'"
-          :activity="item"
+          :activity="item as GPActivity"
         />
+
         <Poll
-          v-else-if="item.doctype == 'GP Poll'"
+          v-else-if="item.doctype === 'GP Poll'"
           :ref="($poll) => setItemRef($poll, item)"
-          :highlight="
-            highlightedItem?.doctype == item.doctype && highlightedItem?.name == item.name
-          "
-          :poll="item"
+          :highlight="highlightedItem?.doctype === item.doctype && highlightedItem?.name === item.name"
+          :poll="item as GPPoll"
           :readOnlyMode="readOnlyMode"
         />
       </template>
     </div>
 
+    <!-- Add comment / new comment box -->
     <div
       v-if="!readOnlyMode && !disableNewComment"
       class="fixed z-[2] bottom-12 left-0 sm:left-auto px-4 sm:px-0 mb-px mt-2 w-full sm:max-w-3xl bg-surface-white py-3 sm:bottom-[-1px] standalone:bottom-16"
@@ -82,6 +83,7 @@
         <UserAvatar class="mr-3" :user="$user().name" size="sm" />
         Add a comment
       </button>
+
       <div
         v-show="showCommentBox"
         class="w-full rounded-lg border bg-surface-white p-4 focus-within:border-outline-gray-3"
@@ -93,15 +95,17 @@
           <span class="ml-2 text-base font-medium text-ink-gray-8">
             {{ $user().full_name }}
           </span>
+
           <TabButtons
             class="ml-auto"
             :buttons="[{ label: 'Comment' }, { label: 'Poll' }]"
             v-model="newCommentType"
           />
         </div>
+
         <CommentEditor
           ref="newCommentEditor"
-          v-if="showCommentBox && newCommentType == 'Comment'"
+          v-if="showCommentBox && newCommentType === 'Comment'"
           :key="commentEditorKey"
           :value="newComment"
           @change="onNewCommentChange"
@@ -111,23 +115,18 @@
             loading: comments.insert.loading,
             disabled: commentEmpty,
           }"
-          :discardButtonProps="{
-            onClick: discardComment,
-          }"
+          :discardButtonProps="{ onClick: discardComment }"
           :editable="true"
           placeholder="Add a comment..."
         />
+
         <PollEditor
-          v-show="newCommentType == 'Poll'"
+          v-show="newCommentType === 'Poll'"
           v-model:poll="newPoll"
-          :submitButtonProps="{
-            onClick: submitPoll,
-            loading: polls.insert.loading,
-          }"
-          :discardButtonProps="{
-            onClick: discardPoll,
-          }"
+          :submitButtonProps="{ onClick: submitPoll, loading: polls.insert.loading }"
+          :discardButtonProps="{ onClick: discardPoll }"
         />
+
         <ErrorMessage :message="polls.insert.error" />
       </div>
     </div>
@@ -135,7 +134,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted, watch, useTemplateRef } from 'vue'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useList } from 'frappe-ui/src/data-fetching'
 import { TabButtons, ErrorMessage } from 'frappe-ui'
@@ -175,7 +175,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 defineEmits<{
-  (e: 'rich-quote', quote: string, author: string): void
+  (e: 'rich-quote', quote: string, author: object): void
   (e: 'rich-quote-click', payload: object): void
 }>()
 
@@ -183,38 +183,33 @@ const router = useRouter()
 const route = useRoute()
 const socket = useSocket()
 
+// state
 const showCommentBox = ref(false)
 const newCommentType = ref<'Comment' | 'Poll'>('Comment')
-const newComment = ref(localStorage.getItem(draftCommentKey()) || '')
-const newPoll = ref({
+const draftKey = (d: string, n: string) => `draft-comment-${d}-${n}`
+const newComment = ref<string>(localStorage.getItem(draftKey(props.doctype, props.name)) || '')
+const newPoll = ref<NewPoll>({
   title: '',
   multiple_answers: false,
-  anonymous: false,
   options: [
     { title: '', idx: 1 },
     { title: '', idx: 2 },
   ],
 })
-const newMessagesFrom = ref(props.newCommentsFrom)
+const newMessagesFrom = ref<string | undefined>(props.newCommentsFrom)
 const highlightedItem = ref<{ doctype: string; name: string } | null>(null)
-const addCommentHeight = ref(0)
-const newCommentEditor = useTemplateRef('newCommentEditor')
-const addComment = ref(null)
+const addCommentHeight = ref<number>(0)
+const newCommentEditor = ref<{ editor?: Editor } | null>(null) // template ref
+const addComment = ref<HTMLElement | null>(null)
 let mutationObserver: MutationObserver | undefined
-const commentEditorKey = ref(0)
+const commentEditorKey = ref<number>(0)
 
+// ---------- DATA LISTS (FIXED: no nested dicts in fields) ----------
 const comments = useList<GPComment>({
   doctype: 'GP Comment',
   cacheKey: ['Comments', props.doctype, props.name],
-  fields: [
-    'name',
-    'content',
-    'owner',
-    'creation',
-    'modified',
-    'deleted_at',
-    { reactions: ['name', 'user', 'emoji'] },
-  ],
+  // IMPORTANT: only flat string fields here
+  fields: ['name', 'content', 'owner', 'creation', 'modified', 'deleted_at'],
   transform(data) {
     return data.map((d) => ({ ...d, doctype: 'GP Comment' }))
   },
@@ -232,7 +227,7 @@ const comments = useList<GPComment>({
       }
       const comment = comments.data?.find((c) => c.name === route.query.comment)
       scrollToItem(comment)
-    } else if (!route.query.fromSearch && comments.data?.length > 0) {
+    } else if (!route.query.fromSearch && comments.data?.length) {
       scrollToEnd()
     }
   },
@@ -256,20 +251,10 @@ const activities = useList<GPActivity>({
   },
 })
 
+// Polls: same fix — do not request child tables via nested dicts
 const polls = useList<GPPoll>({
   doctype: 'GP Poll',
-  fields: [
-    'name',
-    'title',
-    'anonymous',
-    'multiple_answers',
-    'creation',
-    'owner',
-    'stopped_at',
-    { options: ['name', 'title', 'idx', 'percentage'] },
-    { votes: ['user', 'option'] },
-    { reactions: ['name', 'user', 'emoji'] },
-  ],
+  fields: ['name', 'title', 'anonymous', 'multiple_answers', 'creation', 'owner', 'stopped_at'],
   filters: {
     discussion: props.name,
   },
@@ -286,18 +271,12 @@ const polls = useList<GPPoll>({
   },
 })
 
-// Computed
-const timelineItems = computed(() => {
-  let items: Array<GPComment | GPActivity | GPPoll> = []
-  if (comments.data?.length) {
-    items = items.concat(comments.data)
-  }
-  if (activities.data?.length) {
-    items = items.concat(activities.data)
-  }
-  if (polls.data?.length) {
-    items = items.concat(polls.data)
-  }
+// ---------- COMPUTED ----------
+const timelineItems = computed<Array<GPComment | GPActivity | GPPoll>>(() => {
+  const items: Array<GPComment | GPActivity | GPPoll> = []
+  if (comments.data?.length) items.push(...comments.data)
+  if (activities.data?.length) items.push(...activities.data)
+  if (polls.data?.length) items.push(...polls.data)
   return items.sort((a, b) => new Date(a.creation).valueOf() - new Date(b.creation).valueOf())
 })
 
@@ -306,9 +285,10 @@ const commentEmpty = computed(() => {
 })
 
 const editorObject = computed<Editor | null>(() => {
-  return newCommentEditor.value?.editor || null
+  return (newCommentEditor.value?.editor as Editor) ?? null
 })
 
+// expose functions to parent
 defineExpose({
   editorObject,
   openCommentBox,
@@ -317,37 +297,31 @@ defineExpose({
   highlightComment,
 })
 
-function draftCommentKey(): string {
-  return `draft-comment-${props.doctype}-${props.name}`
-}
-
+// ---------- HELPERS ----------
 function openCommentBox() {
   showCommentBox.value = true
   newCommentType.value = 'Comment'
 }
 
-function getCommentContentElement(id) {
+function getCommentContentElement(id: string) {
   const comment = timelineItems.value?.find((c) => c.name === id)
-  if (comment?.$el) {
-    return comment.$el
-  }
+  // component refs set $el on item in setItemRef
+  // returns HTMLElement or undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (comment as any)?.$el
 }
 
 function highlightComment(id: string) {
-  const comment = timelineItems.value?.find((c) => c.doctype == 'GP Comment' && c.name === id)
-  if (comment) {
-    highlightedItem.value = {
-      doctype: comment.doctype,
-      name: comment.name,
-    }
-    setTimeout(() => {
-      highlightedItem.value = null
-    }, 10000)
-  }
+  const comment = timelineItems.value?.find((c) => c.doctype === 'GP Comment' && c.name === id)
+  if (!comment) return
+  highlightedItem.value = { doctype: comment.doctype, name: comment.name }
+  setTimeout(() => {
+    highlightedItem.value = null
+  }, 10000)
 }
 
 function resetCommentState() {
-  localStorage.removeItem(draftCommentKey())
+  localStorage.removeItem(draftKey(props.doctype, props.name))
   newComment.value = ''
   showCommentBox.value = false
   commentEditorKey.value++
@@ -355,7 +329,6 @@ function resetCommentState() {
   newPoll.value = {
     title: '',
     multiple_answers: false,
-    anonymous: false,
     options: [
       { title: '', idx: 1 },
       { title: '', idx: 2 },
@@ -366,17 +339,13 @@ function resetCommentState() {
 
 async function submitComment() {
   if (commentEmpty.value) return
-
-  comments.insert
-    .submit({
-      reference_doctype: props.doctype,
-      reference_name: props.name,
-      content: newComment.value,
-    })
-    .then(() => {
-      resetCommentState()
-      tags.reload()
-    })
+  await comments.insert.submit({
+    reference_doctype: props.doctype,
+    reference_name: props.name,
+    content: newComment.value,
+  })
+  resetCommentState()
+  tags.reload()
 }
 
 async function scrollToEnd() {
@@ -396,20 +365,15 @@ function _scrollToEnd() {
 
 function scrollToCommentById(id: string) {
   const item = timelineItems.value.find((item) => item.name === id)
-  if (item) {
-    scrollToItem(item)
-  }
+  if (item) scrollToItem(item)
 }
 
 async function scrollToItem(item: any) {
   if (!item) return
   await nextTick()
   if (item.$el) {
-    scrollToElement(item.$el)
-    highlightedItem.value = {
-      doctype: item.doctype,
-      name: item.name,
-    }
+    await scrollToElement(item.$el)
+    highlightedItem.value = { doctype: item.doctype, name: item.name }
   }
   setTimeout(() => {
     highlightedItem.value = null
@@ -419,10 +383,10 @@ async function scrollToItem(item: any) {
 
 async function scrollToElement($el: HTMLElement) {
   await wait(50)
-  let top = _scrollToElement($el)
+  const top = _scrollToElement($el)
   await wait(100)
   const scrollContainer = getScrollContainer()
-  if (scrollContainer.scrollTop != top) {
+  if (scrollContainer.scrollTop !== top) {
     _scrollToElement($el)
   }
 }
@@ -436,24 +400,19 @@ function _scrollToElement($el: HTMLElement) {
 }
 
 function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function submitPoll() {
+async function submitPoll() {
   if (props.doctype !== 'GP Discussion') return
-  return polls.insert
-    .submit({
-      discussion: props.name,
-      title: newPoll.value.title,
-      anonymous: newPoll.value.anonymous ? 1 : 0,
-      multiple_answers: newPoll.value.multiple_answers ? 1 : 0,
-      options: newPoll.value.options,
-    })
-    .then(() => {
-      resetCommentState()
-    })
+  await polls.insert.submit({
+    discussion: props.name,
+    title: newPoll.value.title,
+    anonymous: newPoll.value.anonymous ? 1 : 0,
+    multiple_answers: newPoll.value.multiple_answers ? 1 : 0,
+    options: newPoll.value.options,
+  })
+  resetCommentState()
 }
 
 function discardPoll() {
@@ -468,20 +427,20 @@ function setItemRef($component: any, item: any) {
 
 function onNewCommentChange(content: string) {
   newComment.value = content
+  // save draft
   setTimeout(() => {
-    localStorage.setItem(draftCommentKey(), content)
+    localStorage.setItem(draftKey(props.doctype, props.name), content)
   }, 0)
 }
 
 function discardComment() {
-  if (!editorObject.value?.isEmpty) {
+  // call isEmpty if editorObject exists
+  if (editorObject.value && !(editorObject.value as any).isEmpty()) {
     createDialog({
       title: 'Discard comment',
       message: 'Are you sure you want to discard your comment?',
       actions: [
-        {
-          label: 'Keep comment',
-        },
+        { label: 'Keep comment' },
         {
           label: 'Discard comment',
           onClick: ({ close }) => {
@@ -497,24 +456,25 @@ function discardComment() {
   }
 }
 
+// watch open and focus
 watch(showCommentBox, (val) => {
   if (val) {
     nextTick(() => {
-      editorObject.value?.commands.focus()
+      editorObject.value?.commands?.focus?.()
       scrollToEnd()
     })
   }
 })
 
 onMounted(() => {
-  if (!commentEmpty.value) {
-    showCommentBox.value = true
-  }
-  socket.on('new_activity', (data) => {
+  if (!commentEmpty.value) showCommentBox.value = true
+
+  socket.on('new_activity', (data: any) => {
     if (data.reference_doctype === props.doctype && data.reference_name === props.name) {
       activities.reload()
     }
   })
+
   setupMutationObserver()
 })
 

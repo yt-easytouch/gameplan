@@ -4,6 +4,8 @@
       v-if="highlight"
       class="absolute inset-0 translate-y- z-[5] rounded border-2 -mx-4 -mb-4 mt-11 pointer-events-none"
     />
+
+    <!-- Header -->
     <div
       class="pb-2 flex items-center text-base text-ink-gray-8 pt-15 top-0 sticky bg-surface-white"
     >
@@ -11,11 +13,16 @@
         <UserProfileLink class="mr-3" :user="user.name">
           <UserAvatarWithHover :user="user.name" size="lg" />
         </UserProfileLink>
+
         <div class="md:flex md:items-center">
-          <UserProfileLink class="font-medium hover:text-ink-blue-4" :user="user.name">
+          <UserProfileLink
+            class="font-medium hover:text-ink-blue-4"
+            :user="user.name"
+          >
             {{ user.full_name }}
             <span class="hidden md:inline">&nbsp;&middot;&nbsp;</span>
           </UserProfileLink>
+
           <div>
             <Tooltip :text="dayjsLocal(_poll.creation).format('D MMM YYYY [at] h:mm A')">
               <time class="text-ink-gray-5" :datetime="_poll.creation">
@@ -25,14 +32,21 @@
           </div>
         </div>
       </UserInfo>
+
       <div class="ml-auto flex items-center space-x-2">
-        <Button v-if="!isStopped && $isSessionUser(_poll.owner)" variant="ghost" @click="stopPoll">
+        <Button
+          v-if="!isStopped && $isSessionUser(_poll.owner)"
+          variant="ghost"
+          @click="stopPoll"
+        >
           <template #prefix><LucideMinusCircle class="w-4" /></template>
           Stop Poll
         </Button>
+
         <Tooltip v-else text="This is a poll">
           <LucideBarChart2 class="h-4 w-4 -rotate-90" />
         </Tooltip>
+
         <Dropdown
           placement="right"
           :button="{
@@ -44,13 +58,20 @@
         />
       </div>
     </div>
+
+    <!-- Poll Content -->
     <div class="text-base text-ink-gray-8 font-semibold">{{ _poll.title }}</div>
+
     <div class="mt-1 text-sm text-ink-gray-5">
       <span v-if="_poll.multiple_answers"> Multiple answers &middot; </span>
       <span v-if="_poll.anonymous"> Anonymous &middot; </span>
-      <span> {{ _poll.total_votes }} {{ _poll.total_votes === 1 ? 'vote' : 'votes' }} </span>
+      <span>
+        {{ _poll.total_votes }}
+        {{ _poll.total_votes === 1 ? 'vote' : 'votes' }}
+      </span>
       <span v-if="_poll.stopped_at"> &middot; {{ stopTime }} </span>
     </div>
+
     <div class="my-4 space-y-2">
       <button
         class="group flex items-center text-ink-gray-8"
@@ -75,6 +96,7 @@
             :stroke-width="2.5"
           />
         </div>
+
         <div class="flex items-baseline">
           <div class="text-base text-ink-gray-8">{{ option.title }}</div>
           <div class="ml-1 text-base text-ink-gray-5" v-if="participated">
@@ -83,30 +105,50 @@
         </div>
       </button>
     </div>
+
+    <!-- ✅ FIXED REACTIONS SECTION -->
     <div class="mt-3">
-      <Reactions doctype="GP Poll" :name="poll.name" :reactions="_poll.reactions" />
+      <Reactions
+        v-if="_poll.reactions && Array.isArray(_poll.reactions)"
+        :doctype="'GP Poll'"
+        :name="_poll.name"
+        :reactions="_poll.reactions"
+      />
     </div>
+
+    <!-- Poll Results Dialog -->
     <Dialog :options="{ title: 'Poll results' }" v-model="showDialog">
       <template #body-content>
         <h2 class="text-lg font-medium text-ink-gray-8">{{ _poll.title }}</h2>
-        <div v-if="!pollResults" class="text-base text-ink-gray-6 mt-2">No votes yet</div>
+
+        <div v-if="!pollResults" class="text-base text-ink-gray-6 mt-2">
+          No votes yet
+        </div>
+
         <div class="mt-6 space-y-6">
           <div v-for="option in pollResults" :key="option.title">
             <div class="flex items-center mb-2">
-              <h3 class="text-base text-ink-gray-8 font-medium">{{ option.title }}</h3>
+              <h3 class="text-base text-ink-gray-8 font-medium">
+                {{ option.title }}
+              </h3>
               <div class="mx-2 flex-1 border-b border-outline-gray-2"></div>
               <div class="text-base text-ink-gray-5">
                 {{ option.votes }} {{ option.votes === 1 ? 'vote' : 'votes' }}
               </div>
-              <div class="ml-1 text-base text-ink-gray-5">({{ option.percentage }}%)</div>
+              <div class="ml-1 text-base text-ink-gray-5">
+                ({{ option.percentage }}%)
+              </div>
             </div>
+
             <div class="space-y-2">
               <div class="flex" v-for="user in option.voters" :key="user">
                 <UserInfo :email="user" v-slot="{ user: _user }">
                   <UserProfileLink :user="_user.name">
                     <div class="flex items-center space-x-2">
                       <UserAvatar size="sm" :user="_user.name" />
-                      <span class="text-base text-ink-gray-8">{{ _user.full_name }}</span>
+                      <span class="text-base text-ink-gray-8">
+                        {{ _user.full_name }}
+                      </span>
                     </div>
                   </UserProfileLink>
                 </UserInfo>
@@ -118,6 +160,7 @@
     </Dialog>
   </div>
 </template>
+
 <script>
 import { Dropdown, Dialog, Tooltip, dayjsLocal } from 'frappe-ui'
 import UserAvatar from './UserAvatar.vue'
@@ -152,9 +195,7 @@ export default {
     }
   },
   setup() {
-    return {
-      dayjsLocal,
-    }
+    return { dayjsLocal }
   },
   resources: {
     poll() {
@@ -213,12 +254,12 @@ export default {
     },
     isVotedByUser(option) {
       return this._poll.votes.find(
-        (vote) => vote.option === option && vote.user === this.$user().name,
+        (vote) => vote.option === option && vote.user === this.$user().name
       )
     },
     copyLink() {
-      let location = window.location
-      let url = `${location.origin}${location.pathname}?poll=${this.poll.name}`
+      const location = window.location
+      const url = `${location.origin}${location.pathname}?poll=${this.poll.name}`
       copyToClipboard(url)
     },
   },
@@ -228,16 +269,14 @@ export default {
     },
     pollResults() {
       if (!this.$resources.poll.doc || this._poll.anonymous) return null
-      return this._poll.options.map((option) => {
-        return {
-          title: option.title,
-          votes: option.votes,
-          percentage: option.percentage,
-          voters: this._poll.votes
-            .filter((vote) => vote.option === option.title)
-            .map((vote) => vote.user),
-        }
-      })
+      return this._poll.options.map((option) => ({
+        title: option.title,
+        votes: option.votes,
+        percentage: option.percentage,
+        voters: this._poll.votes
+          .filter((vote) => vote.option === option.title)
+          .map((vote) => vote.user),
+      }))
     },
     dropdownOptions() {
       return [
@@ -245,9 +284,7 @@ export default {
           label: 'Show results',
           icon: 'bar-chart-2',
           condition: () => !this._poll.anonymous,
-          onClick: () => {
-            this.showDialog = true
-          },
+          onClick: () => (this.showDialog = true),
         },
         {
           label: 'Retract vote',
@@ -301,7 +338,7 @@ export default {
       return this._poll.stopped_at && dayjsLocal().isAfter(this._poll.stopped_at)
     },
     stopTime() {
-      let timestamp = this._poll.stopped_at
+      const timestamp = this._poll.stopped_at
       if (dayjsLocal().diff(timestamp, 'day') < 7) {
         return `Ended ${dayjsLocal(timestamp).fromNow()}`
       }

@@ -1,48 +1,54 @@
 interface DocType {
-  name: string
-  creation: string
-  modified: string
-  owner: string
-  modified_by: string
-}
+    name: string;
+    creation: string;
+    modified: string;
+    owner: string;
+    modified_by: string;
+  }
 
-interface ChildDocType extends DocType {
-  parent?: string
-  parentfield?: string
-  parenttype?: string
-  idx?: number
-}
-
-// Last updated: 2023-06-15 21:01:42.058336
+  interface ChildDocType extends DocType {
+    parent?: string;
+    parentfield?: string;
+    parenttype?: string;
+    idx?: number;
+  }
+  
+// Last updated: 2025-10-18 12:41:57.142105
 export interface GPTask extends DocType {
   /** Title: Data */
-  title: string
+  title: string;
   /** Description: Text Editor */
-  description?: string
+  description?: string;
   /** Start Date: Date */
-  start_date?: string
+  start_date?: string;
   /** Due Date: Date */
-  due_date?: string
+  due_date?: string;
   /** Status: Select */
-  status: 'Backlog' | 'Todo' | 'In Progress' | 'Done' | 'Canceled'
+  status?: '' | 'Backlog' | 'Todo' | 'In Progress' | 'Done' | 'Canceled';
   /** Priority: Select */
-  priority?: '' | 'Urgent' | 'High' | 'Medium' | 'Low'
+  priority?: '' | 'Urgent' | 'High' | 'Medium' | 'Low';
   /** Is Completed: Check */
-  is_completed: 0 | 1
+  is_completed: 0 | 1;
   /** Project: Link (GP Project) */
-  project?: string
+  project?: string;
   /** Index: Int */
-  idx?: number
+  idx?: number;
   /** Team: Link (GP Team) */
-  team?: string
+  team?: string;
   /** Assigned To: Link (User) */
-  assigned_to?: string
+  assigned_to?: string;
   /** Completed At: Datetime */
-  completed_at?: string
+  completed_at?: string;
   /** Completed By: Data */
-  completed_by?: string
+  completed_by?: string;
   /** Comments Count: Int */
-  comments_count?: number
+  comments_count?: number;
+  /** TaskID: Data */
+  taskid?: string;
+  /** Sprint: Link (Sprint) */
+  sprint?: string;
+  /** Type: Select */
+  type?: 'Task' | 'Bug';
 }
 
 // Last updated: 2023-01-16 13:19:48.202430
@@ -211,32 +217,34 @@ export interface GPInvitation extends DocType {
   role: '' | 'Gameplan Admin' | 'Gameplan Member' | 'Gameplan Guest'
 }
 
-// Last updated: 2024-12-15 00:46:16.394764
+// Last updated: 2025-07-27 16:41:07.066729
 export interface GPProject extends DocType {
   /** Title: Data */
-  title: string
+  title: string;
   /** Description: Text Editor */
-  description?: string
+  description?: string;
   /** Team: Link (GP Team) */
-  team?: string
+  team?: string;
   /** Members: Table (GP Member) */
-  members: GPMember[]
+  members: GPMember[];
   /** Icon: Data */
-  icon?: string
+  icon?: string;
   /** Readme: Text Editor */
-  readme?: string
+  readme?: string;
   /** Tasks Count: Int */
-  tasks_count?: number
+  tasks_count?: number;
   /** Discussions Count: Int */
-  discussions_count?: number
+  discussions_count?: number;
   /** Archived At: Datetime */
-  archived_at?: string
+  archived_at?: string;
   /** Archived By: Link (User) */
-  archived_by?: string
+  archived_by?: string;
   /** Is Private: Check */
-  is_private: 0 | 1
+  is_private: 0 | 1;
   /** Is Followed: Check */
-  is_followed: 0 | 1
+  is_followed: 0 | 1;
+  /** Code: Data */
+  code?: string;
 }
 
 // Last updated: 2022-08-11 18:36:55.799372
