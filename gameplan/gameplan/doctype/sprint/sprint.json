@@ -1,13 +1,17 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:sprint_name",
  "creation": "2025-10-18 09:40:07.989879",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "title",
+  "sprint_name",
   "project",
-  "status",
+  "project_name",
   "column_break_ltnf",
+  "status",
   "start_date",
   "end_date",
   "section_break_olug",
@@ -19,9 +23,7 @@
   "column_break_uysv",
   "team",
   "completed_points",
-  "burndown_chart",
-  "section_break_vobn",
-  "tasks"
+  "burndown_chart"
  ],
  "fields": [
   {
@@ -99,23 +101,35 @@
    "label": "Burndown Chart"
   },
   {
-   "fieldname": "section_break_vobn",
-   "fieldtype": "Section Break"
+   "fieldname": "sprint_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Sprint Name",
+   "unique": 1
   },
   {
-   "fieldname": "tasks",
-   "fieldtype": "Table",
-   "label": "Tasks",
-   "options": "Tasks"
+   "fetch_from": "project.title",
+   "fieldname": "project_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Project Name"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-18 09:40:07.989879",
+ "modified": "2025-10-18 12:56:00.210424",
  "modified_by": "Administrator",
  "module": "Gameplan",
  "name": "Sprint",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
