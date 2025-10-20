@@ -131,6 +131,8 @@ export interface GPDiscussion extends DocType {
   content?: string
   /** Status: Data */
   status?: string
+  /** Issue Type: Data */
+  issue_type: string  
   /** Title: Data */
   title: string
   /** Reactions: Table (GP Reaction) */
@@ -346,7 +348,10 @@ export interface GPDraft extends DocType {
   /** Project: Link (GP Project) */
   project?: string
   /** Team: Link (GP Team) */
-  team?: string
+  team?: string,
+  /** Issue Type: Link (GP Issue Type) */
+  issue_type?: string,
+
 }
 
 // Last updated: 2025-05-22 13:12:57.407226

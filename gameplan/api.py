@@ -639,3 +639,8 @@ def proxy_document():
     frappe.response.update({
             "data": docs,
         })
+	
+
+@frappe.whitelist()
+def get_issue_type():
+	return frappe.get_list("GP Issue Type",fields=["name","type"],ignore_permissions = True)

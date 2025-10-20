@@ -17,6 +17,7 @@ export function useDraftData() {
       title: '',
       content: '',
       project: null as string | null,
+      issue_type:''
     },
     { deep: true },
   )

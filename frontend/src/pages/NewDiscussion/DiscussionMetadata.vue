@@ -17,6 +17,16 @@
         :class="[author.name !== sessionUser.name ? 'pointer-events-none' : '']"
         @focus="handleComboboxFocus"
         @blur="handleComboboxBlur"
+      /> 
+      
+      <Combobox
+        :options="formattedIssueTypeOptions"
+        class="m-4"
+        v-model="draftData.issue_type"
+        placeholder="Select Space"
+        :class="[author.name !== sessionUser.name ? 'pointer-events-none' : ''] "
+        @focus="handleComboboxFocus"
+        @blur="handleComboboxBlur"
       />
     </div>
   </div>
@@ -32,7 +42,9 @@ const {
   sessionUser,
   draftData,
   formattedSpaceOptions,
+  formattedIssueTypeOptions,
   handleComboboxFocus,
   handleComboboxBlur,
 } = useNewDiscussionContext()
+
 </script>

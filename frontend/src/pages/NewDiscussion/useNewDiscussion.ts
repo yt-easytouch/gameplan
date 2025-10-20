@@ -1,12 +1,11 @@
-import { computed, onMounted, provide, inject, type InjectionKey } from 'vue'
+import { computed, onMounted, provide, inject, type InjectionKey, ref } from 'vue'
 import { useGroupedSpaceOptions } from '@/data/groupedSpaces'
 import { useSessionUser, useUser } from '@/data/users'
-
 import { useDraftData } from './useDraftData'
 import { useDraftActions } from './useDraftActions'
 import { useUIBehavior } from './useUIBehavior'
-
 import type { TextEditorRef, DraftDocumentCallback } from './types'
+import { call } from 'frappe-ui'
 
 export function useNewDiscussion(textEditorRef?: TextEditorRef) {
   const sessionUser = useSessionUser()
@@ -76,6 +75,24 @@ export function useNewDiscussion(textEditorRef?: TextEditorRef) {
     return useUser(draftDoc.value ? draftDoc.value.doc?.owner : sessionUser.name)
   })
 
+  const issueTypeOptions = ref([])
+  const formattedIssueTypeOptions = computed(() =>
+    issueTypeOptions.value.map((i) => ({
+      label: i.type || i.name,
+      value: i.name,
+    })),
+  )
+
+  // Fetch issue types from your backend API
+  async function loadIssueTypes() {
+    try {
+      const res = await call('gameplan.api.get_issue_type', {})
+      issueTypeOptions.value = res
+    } catch (error) {
+      console.error('Failed to load issue types:', error)
+    }
+  }
+
   const handleTitleInput = (e: Event) => {
     const target = e.target as HTMLTextAreaElement
     draftData.value.title = target.value
@@ -97,9 +114,11 @@ export function useNewDiscussion(textEditorRef?: TextEditorRef) {
       if (textEditorRef) {
         setupEditorListeners(textEditorRef)
       }
+
+      // Load issue types on mount
+      loadIssueTypes()
     })
   }
-
   return {
     // Data
     draftData,
@@ -108,6 +127,7 @@ export function useNewDiscussion(textEditorRef?: TextEditorRef) {
     sessionUser,
     author,
     formattedSpaceOptions,
+    formattedIssueTypeOptions,
 
     // State
     isDraftChanged,

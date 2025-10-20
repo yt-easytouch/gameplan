@@ -22,7 +22,7 @@ class GPDraft(Document):
 		if self.type == "Discussion":
 			content = remove_query_params_from_images(self.content)
 			discussion = frappe.new_doc(
-				"GP Discussion", title=self.title, content=content, project=self.project
+				"GP Discussion", title=self.title, content=content, project=self.project, issue_type=self.issue_type
 			).insert()
 			attachments = frappe.db.get_all(
 				"File",

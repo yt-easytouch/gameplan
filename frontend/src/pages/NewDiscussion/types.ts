@@ -7,6 +7,7 @@ export interface DraftData {
   title: string
   content: string
   project: string | null
+  issue_type: string
 }
 
 // Document-related types

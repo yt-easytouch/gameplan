@@ -51,6 +51,7 @@ export function useDraftActions(
           title: draftData.value.title,
           content: draftData.value.content,
           project: projectValue,
+          issue_type: draftData.value.issue_type,
         })
         .then(() => {
           isPublishingSuccessfully.value = true
@@ -83,6 +84,7 @@ export function useDraftActions(
       .submit({
         title: draftData.value.title,
         content: draftData.value.content,
+        issue_type: draftData.value.issue_type,
         project: projectValue,
       })
       .then((doc) => {
@@ -137,6 +139,7 @@ export function useDraftActions(
       title: draftData.value.title,
       content: draftData.value.content,
       project: draftData.value.project || undefined,
+      issue_type: draftData.value.issue_type || undefined,
     })
   }
 
@@ -144,6 +147,7 @@ export function useDraftActions(
     let draft = useNewDoc<GPDraft>('GP Draft', {
       title: draftData.value.title,
       content: draftData.value.content,
+      issue_type: draftData.value.issue_type,
       project: draftData.value.project || undefined,
       type: 'Discussion',
     })
