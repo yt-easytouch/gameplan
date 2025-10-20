@@ -37,8 +37,8 @@
             </div>
           </div>
         </div>
-       <Dropdown
-          v-if="editableComment == null"
+        <Dropdown
+          v-show="editableComment == null"
           class="ml-auto"
           placement="right"
           :button="{
@@ -48,8 +48,6 @@
           }"
           :options="dropdownOptions"
         />
-
-
       </div>
       <div class="flex-1">
         <div

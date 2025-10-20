@@ -10,7 +10,6 @@
   "team",
   "status",
   "title",
-  "discussion_type",
   "slug",
   "content",
   "reactions",
@@ -137,18 +136,12 @@
    "fieldtype": "Table",
    "label": "Tags",
    "options": "GP Tag Link"
-  },
-  {
-   "fieldname": "discussion_type",
-   "fieldtype": "Select",
-   "label": "Discussion Type",
-   "options": "Task\nBug"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-19 14:58:13.904133",
+ "modified": "2025-05-22 13:12:36.398541",
  "modified_by": "Administrator",
  "module": "Gameplan",
  "name": "GP Discussion",
