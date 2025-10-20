@@ -644,3 +644,11 @@ def proxy_document():
 @frappe.whitelist()
 def get_issue_type():
 	return frappe.get_list("GP Issue Type",fields=["name","type"],ignore_permissions = True)
+
+@frappe.whitelist()
+def get_sprints(project):
+	return frappe.get_list("Sprint",filters={"project":project},fields=["name","title"],ignore_permissions = True)
+
+@frappe.whitelist()
+def get_discussions(project):
+	return frappe.get_list("GP Discussion",filters={"project":project},fields=["name","title"],ignore_permissions = True)

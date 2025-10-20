@@ -20,5 +20,7 @@ function newDraftTask() {
     status: 'Backlog',
     assigned_to: '',
     project: '',
+    sprint: '',
+    gp_discussion: '',
   })
 }

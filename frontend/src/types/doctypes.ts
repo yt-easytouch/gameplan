@@ -49,6 +49,11 @@ export interface GPTask extends DocType {
   sprint?: string;
   /** Type: Select */
   type?: 'Task' | 'Bug';
+  /** Discussion: Link (GP Discussion) */
+  gp_discussion: string 
+  
+  /** Member: Link (GP Member) */
+  members: string
 }
 
 // Last updated: 2023-01-16 13:19:48.202430
@@ -121,48 +126,50 @@ export interface GPNotification extends DocType {
   project?: string
   /** Team: Link (GP Team) */
   team?: string
+  /** Discussion: Link (GP Discussion) */
+  gp_discussion?: string
 }
 
-// Last updated: 2025-05-22 13:12:36.398541
+// Last updated: 2025-10-20 09:58:40.178136
 export interface GPDiscussion extends DocType {
   /** Project: Link (GP Project) */
-  project: string
+  project: string;
   /** Content: Text Editor */
-  content?: string
+  content?: string;
   /** Status: Data */
-  status?: string
-  /** Issue Type: Data */
-  issue_type: string  
+  status?: string;
   /** Title: Data */
-  title: string
+  title: string;
   /** Reactions: Table (GP Reaction) */
-  reactions: GPReaction[]
+  reactions: GPReaction[];
   /** Team: Link (GP Team) */
-  team?: string
+  team?: string;
   /** Last Post At: Datetime */
-  last_post_at?: string
+  last_post_at?: string;
   /** Comments Count: Int */
-  comments_count?: number
+  comments_count?: number;
   /** Last Post By: Link (User) */
-  last_post_by?: string
+  last_post_by?: string;
   /** Closed At: Datetime */
-  closed_at?: string
+  closed_at?: string;
   /** Closed By: Link (User) */
-  closed_by?: string
+  closed_by?: string;
   /** Slug: Data */
-  slug?: string
+  slug?: string;
   /** Participants Count: Int */
-  participants_count: number
+  participants_count?: number;
   /** Pinned At: Datetime */
-  pinned_at?: string
+  pinned_at?: string;
   /** Pinned By: Link (User) */
-  pinned_by?: string
+  pinned_by?: string;
   /** Last Post Type: Select */
-  last_post_type: 'GP Comment' | 'GP Poll'
+  last_post_type?: '' | 'GP Comment' | 'GP Poll';
   /** Last Post: Dynamic Link (last_post_type) */
-  last_post?: string
+  last_post?: string;
   /** Tags: Table (GP Tag Link) */
-  tags: GPTagLink[]
+  tags: GPTagLink[];
+  /** Issue Type: Link (GP Issue Type) */
+  issue_type?: string;
 }
 
 // Last updated: 2023-02-13 21:00:23.191195
@@ -337,21 +344,20 @@ export interface GPSearchFeedback extends DocType {
   query?: string
 }
 
-// Last updated: 2025-03-08 16:00:25.825860
+// Last updated: 2025-10-20 10:22:29.640856
 export interface GPDraft extends DocType {
   /** Title: Data */
-  title?: string
+  title?: string;
   /** Content: Text Editor */
-  content?: string
+  content?: string;
   /** Type: Select */
-  type?: 'Discussion' | 'Comment'
+  type?: 'Discussion' | 'Comment';
   /** Project: Link (GP Project) */
-  project?: string
+  project?: string;
   /** Team: Link (GP Team) */
-  team?: string,
+  team?: string;
   /** Issue Type: Link (GP Issue Type) */
-  issue_type?: string,
-
+  issue_type?: string;
 }
 
 // Last updated: 2025-05-22 13:12:57.407226

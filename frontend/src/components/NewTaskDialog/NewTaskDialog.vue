@@ -1,18 +1,28 @@
 <template>
-  <Dialog :options="{ title: 'New Task' }" :disableOutsideClickToClose="disableOutsideClickToClose"
-    v-model="showDialog">
+  <Dialog
+    :options="{ title: 'New Task' }"
+    :disableOutsideClickToClose="disableOutsideClickToClose"
+    v-model="showDialog"
+  >
     <!-- Body -->
     <template #body-content>
       <div class="space-y-4" v-if="newTask">
+        <!-- 🏷 Title -->
+        <FormControl
+          label="Title"
+          v-model="newTask.doc.title"
+          autocomplete="off"
+          required
+          ref="titleInput"
+          @keydown.enter="onCreateClick"
+        />
 
-
-
-        <!-- Title -->
-        <FormControl label="Title" v-model="newTask.doc.title" autocomplete="off" required ref="titleInput"
-          @keydown.enter="onCreateClick" />
-
-        <!-- Project -->
-        <Autocomplete placeholder="Project" :options="spaceOptions" v-model="newTask.doc.project">
+        <!-- 🧩 Project -->
+        <Autocomplete
+          placeholder="Project"
+          :options="spaceOptions"
+          v-model="newTask.doc.project"
+        >
           <template #prefix>
             <div class="mr-2 leading-4 font-[emoji]" v-if="newTask.doc.project">
               {{ useSpace(newTask.doc.project?.value ?? newTask.doc.project).value.icon }}
@@ -23,69 +33,41 @@
           </template>
         </Autocomplete>
 
-        <!-- Sprint -->
-        <Autocomplete placeholder="Sprint" :options="SprintOptions" v-model="newTask.doc.sprint" />
+        <!-- 🧩 Sprint (filtered by project) -->
+        <Autocomplete
+          placeholder="Sprint"
+          :options="formattedSprintOptions"
+          v-model="newTask.doc.sprint"
+        /> 
+        <!-- 🧩 GP Discussion (filtered by project) -->
+        <Autocomplete
+          placeholder="Discussion"
+          :options="formattedDiscussionOptions"
+          v-model="newTask.doc.gp_discussion"
+        />
 
-        <!-- Description -->
-        <FormControl label="Description" type="textarea" v-model="newTask.doc.description"
-          @keydown.enter="onCreateClick" />
+        <!-- 📝 Description -->
+        <FormControl
+          label="Description"
+          type="textarea"
+          v-model="newTask.doc.description"
+          @keydown.enter="onCreateClick"
+        />
 
-        <!-- Assigned user + Due date -->
+        <!-- 👤 Assigned user + ⏰ Due date -->
         <div class="grid grid-cols-2 gap-2">
-          <Autocomplete placeholder="Assign a user" :options="assignableUsers" v-model="newTask.doc.assigned_to" />
-          <TextInput type="date" placeholder="Set due date" v-model="newTask.doc.due_date" />
+          <Autocomplete
+            placeholder="Assign a user"
+            :options="assignableUsers"
+            v-model="newTask.doc.assigned_to"
+          />
+          <TextInput
+            type="date"
+            placeholder="Set due date"
+            v-model="newTask.doc.due_date"
+          />
         </div>
 
-
-
-
-        <!-- <Dropdown class="w-full -z-30" :options="typeOptions()" :teleport="true">
-          <Button class="w-full justify-start">
-            <template #prefix v-if="newTask.doc.type">
-              <TaskStatusIcon :type="newTask.doc.type" />
-            </template>
-            {{ newTask.doc.type || 'Select type' }}
-          </Button>
-        </Dropdown> -->
-
-
-        <Dropdown 
-        :options="[
-          {
-            label: 'Edit',
-            icon: 'edit',
-          },
-          {
-            label: 'Delete', icon: 'trash-2'
-
-          }, {
-            label: 'Edit',
-            icon: 'edit',
-          },
-          {
-            label: 'Delete', icon: 'trash-2'
-
-          }, {
-            label: 'Edit',
-            icon: 'edit',
-          },
-          {
-            label: 'Delete', icon: 'trash-2'
-
-          }, {
-            label: 'Edit',
-            icon: 'edit',
-          },
-          {
-            label: 'Delete', icon: 'trash-2'
-
-          },
-        ]"
-        class="bg-red-500 z-index: 7777; "
-         />
-
-
-        <!-- Error message -->
         <ErrorMessage class="mt-2" :message="newTask.error" />
       </div>
     </template>
@@ -103,25 +85,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, watch, useTemplateRef } from 'vue'
+import { ref, computed, watch, useTemplateRef } from 'vue'
 import {
   Dialog,
   FormControl,
   Autocomplete,
-  Dropdown,
   TextInput,
   ErrorMessage,
   Button,
-  call,
 } from 'frappe-ui'
-import TaskStatusIcon from './TaskStatusIcon.vue'
 import { activeUsers } from '@/data/users'
-import { GPTask } from '@/types/doctypes'
-import { showDialog, newTask, _onSuccess } from './state'
 import { useGroupedSpaceOptions } from '@/data/groupedSpaces'
 import { useSpace } from '@/data/spaces'
 import KeyboardShortcut from '../KeyboardShortcut.vue'
+import { showDialog, newTask, _onSuccess } from './state'
+import { useSprintOptions } from '@/composables/useSprintOptions'
+import { useDiscussionOptions } from '@/composables/useDiscussionOptions'
 
+// --- Refs
 const titleInput = useTemplateRef('titleInput')
 
 // --- Project options
@@ -129,64 +110,20 @@ const spaceOptions = useGroupedSpaceOptions({
   filterFn: (space) => !space.archived_at,
 })
 
-// --- Sprint options (dynamic)
-const SprintOptions = ref([])
+// --- Sprint options (reactive to project)
+const { formattedSprintOptions, loadSprints } = useSprintOptions()
+const { formattedDiscussionOptions, loadDiscussions } = useDiscussionOptions()
 
-async function fetchSprints(projectName?: string) {
-  if (!projectName) {
-    SprintOptions.value = []
-    return
-  }
-
-  try {
-    const res = await call('frappe.client.get_list', {
-      doctype: 'Sprint',
-      filters: { project: projectName },
-      fields: ['name', 'title'],
-    })
-
-    SprintOptions.value = (res || []).map((sprint: any) => ({
-      label: sprint.title || sprint.name,
-      value: sprint.name,
-    }))
-  } catch (err) {
-    console.error('Error fetching sprints:', err)
-  }
-}
-
-// Watch for project changes
 watch(
-  () => newTask.value?.doc?.project,
-  (project) => {
-    const projectName = project?.value ?? project
-    fetchSprints(projectName)
+  () => newTask.value?.doc.project,
+  async (project) => {
+    if (project?.value || project) {
+      await loadSprints(project.value || project)
+      await loadDiscussions(project.value || project)
+    }
   },
-  { immediate: true },
+  { immediate: true }
 )
-
-// --- Status options
-function statusOptions() {
-  return (['Backlog', 'Todo', 'In Progress', 'Done', 'Canceled'] as GPTask['status'][]).map(
-    (status) => ({
-      icon: () => h(TaskStatusIcon, { status }),
-      label: status,
-      onClick: () => {
-        if (newTask.value) newTask.value.doc.status = status
-      },
-    }),
-  )
-}
-
-// --- Type options
-function typeOptions() {
-  return (['Task', 'Bug'] as GPTask['type'][]).map((type) => ({
-    icon: () => h(TaskStatusIcon, { type }),
-    label: type,
-    onClick: () => {
-      if (newTask.value) newTask.value.doc.type = type
-    },
-  }))
-}
 
 // --- Assignable users
 const assignableUsers = computed(() =>
@@ -196,7 +133,7 @@ const assignableUsers = computed(() =>
   })),
 )
 
-// --- Create task
+// --- Create handler
 function onCreateClick(e: KeyboardEvent) {
   if (e instanceof KeyboardEvent && !(e.ctrlKey || e.metaKey)) return
   if (!newTask.value?.doc.title) {
@@ -207,6 +144,7 @@ function onCreateClick(e: KeyboardEvent) {
   newTask.value.doc.assigned_to = newTask.value.doc.assigned_to?.value
   newTask.value.doc.project = newTask.value.doc.project?.value
   newTask.value.doc.sprint = newTask.value.doc.sprint?.value
+  newTask.value.doc.gp_discussion = newTask.value.doc.gp_discussion?.value
 
   newTask.value.submit().then((doc) => {
     showDialog.value = false
@@ -219,8 +157,9 @@ const disableOutsideClickToClose = computed(
   () => newTask.value?.loading || newTask.value?.doc?.title != '',
 )
 
-// --- Auto-focus on open
+// --- Auto-focus title
 watch(showDialog, (val) => {
-  if (val) setTimeout(() => titleInput.value.$el?.querySelector('input')?.focus(), 100)
+  if (val)
+    setTimeout(() => titleInput.value.$el?.querySelector('input')?.focus(), 100)
 })
 </script>
