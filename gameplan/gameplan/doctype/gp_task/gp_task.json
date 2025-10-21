@@ -14,7 +14,7 @@
   "idx",
   "team",
   "is_completed",
-  "members",
+  "task_collaborate",
   "column_break_ntzq",
   "taskid",
   "due_date",
@@ -26,7 +26,9 @@
   "type",
   "gp_discussion",
   "section_break_psaa",
-  "description"
+  "description",
+  "section_break_oaei",
+  "sub_tasks"
  ],
  "fields": [
   {
@@ -140,22 +142,32 @@
    "options": "Task\nBug"
   },
   {
-   "fieldname": "members",
-   "fieldtype": "Table MultiSelect",
-   "label": "Members",
-   "options": "GP Member"
-  },
-  {
    "fieldname": "gp_discussion",
    "fieldtype": "Link",
    "label": "GP Discussion",
    "options": "GP Discussion"
+  },
+  {
+   "fieldname": "section_break_oaei",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sub_tasks",
+   "fieldtype": "Table",
+   "label": "Sub Tasks",
+   "options": "GP Sub Task"
+  },
+  {
+   "fieldname": "task_collaborate",
+   "fieldtype": "Table MultiSelect",
+   "label": "Task Collaborate",
+   "options": "GP Member"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-20 13:51:52.292133",
+ "modified": "2025-10-21 12:03:24.783244",
  "modified_by": "Administrator",
  "module": "Gameplan",
  "name": "GP Task",

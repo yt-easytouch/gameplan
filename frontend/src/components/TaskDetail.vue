@@ -107,6 +107,142 @@
           />
         </div>
 
+      <!-- 📋 Sub Tasks -->
+<div class="mt-10 border-t border-gray-200 pt-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-ink-gray-8 flex items-center gap-2">
+      <FeatherIcon name="check-square" class="w-5 h-5 text-primary" />
+      Sub Tasks
+    </h3>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto rounded-lg border border-gray-200 bg-surface-white shadow-sm">
+    <table class="min-w-full text-base text-left text-ink-gray-8">
+      <thead class="bg-gray-50 text-ink-gray-6 font-medium">
+        <tr>
+          <th class="px-4 py-2 w-[20%]">Title</th>
+          <th class="px-4 py-2 w-[20%]">Collaborators</th>
+          <th class="px-4 py-2 w-[15%]">Status</th>
+          <th class="px-4 py-2 w-[15%]">Due Date</th>
+          <th class="px-4 py-2 text-right w-[10%]">Actions</th>
+        </tr>
+      </thead>
+
+      <TransitionGroup tag="tbody" name="fade">
+        <tr
+          v-for="(sub, index) in task.doc.sub_tasks || []"
+          :key="sub.name || index"
+          class="border-t border-gray-10 hover:bg-gray-40 transition-colors duration-150"
+        >
+          <!-- Title -->
+          <td class="px-4 py-2">
+            <input
+              type="text"
+              v-model="sub.title"
+              placeholder="Sub task title"
+              class="w-full border-none bg-transparent text-ink-gray-8 placeholder-ink-gray-4 
+                     focus:ring-2 focus:ring-outline-gray-3 rounded-md px-2 py-1 text-base font-medium"
+              @blur="saveSubTasks"
+            />
+          </td>
+
+          <!-- Assigned User -->
+          <td class="px-4 py-2">
+           
+          <Autocomplete
+            placeholder="Select collaborators"
+            :options="assignableUsers"
+            :modelValue="sub.sub_task_collaborate?.map(m => m.user) || []"
+            multiple
+            class="text-sm w-full"
+            @update:modelValue="(selected) => handleCollaboratorChange(sub, selected)"
+          />
+
+
+          </td>
+
+          <!-- Status -->
+          <td class="px-4 py-2">
+            <Dropdown
+              :options="['Backlog', 'Todo', 'In Progress', 'Done'].map(s => ({
+                label: s,
+                onClick: () => {
+                  sub.status = s
+                  saveSubTasks(task.doc.sub_tasks)
+                }
+              }))"
+            >
+              <div
+                class="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full cursor-pointer w-fit transition-all"
+                :class="statusBadgeClass(sub.status)"
+              >
+                <span class="w-2 h-2 rounded-full" :class="statusDotClass(sub.status)"></span>
+                {{ sub.status || 'Status' }}
+              </div>
+            </Dropdown>
+          </td>
+
+          <!-- Due Date -->
+          <td class="px-4 py-2">
+            <DatePicker
+              v-model="sub.due_date"
+              placeholder="Due date"
+              size="sm"
+              @update:modelValue="saveSubTasks(task.doc.sub_tasks)"
+            />
+          </td>
+
+          <!-- Delete -->
+          <td class="px-4 py-2 text-right">
+            <Button
+              size="icon"
+              variant="ghost"
+              class="text-red-500 hover:bg-red-100 rounded-full"
+              @click="removeSubTask(index)"
+            >
+              <FeatherIcon name="trash-2" class="w-4 h-4" />
+            </Button>
+          </td>
+        </tr>
+      </TransitionGroup>
+
+      <!-- Empty State -->
+      <tr v-if="!task.doc.sub_tasks?.length">
+        <td colspan="6" class="py-6 text-center text-ink-gray-5 text-base">
+          <FeatherIcon name="clipboard" class="w-5 h-5 inline mb-1 text-gray-400" />
+          <p>No sub tasks yet — add one below.</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Add Sub Task Button -->
+  <div class="flex justify-start mt-4">
+    <Button
+      variant="ghost"
+      size="sm"
+      class="flex items-center gap-1.5 text-primary hover:bg-primary/10 font-medium px-2 py-1.5"
+      @click="addSubTask"
+    >
+      <FeatherIcon name="plus-circle" class="w-4 h-4" />
+      <span>Add Sub Task</span>
+    </Button>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
         <!-- 💬 Comments -->
         <CommentsList class="mt-8" doctype="GP Task" :name="taskId" />
       </div>
@@ -181,13 +317,12 @@
         </div>
 
         <!-- Members -->
-        <div>Task Members</div>
+        <div>collaborators</div>
         <div>
           <Autocomplete
             :options="assignableUsers"
-            :modelValue="task.doc.members?.map((m) => m.user) || []"
+            :modelValue="task.doc.task_collaborate?.map((m) => m.user) || []"
             @update:modelValue="changeMembers"
-            placeholder="Members"
             multiple
           />
         </div>
@@ -221,6 +356,9 @@
     </div>
   </div>
 </template>
+
+
+
 
 <script setup lang="ts">
 import { h, computed, watch } from 'vue'
@@ -261,16 +399,13 @@ task.onSuccess((doc) => {
   }
 })
 
-// --- Computed Options ---
+// 🧩 Computed Options
 const assignableUsers = computed(() =>
   activeUsers.value.map((user) => ({
     label: user.full_name,
     value: user.name,
   })),
 )
-
-
-
 
 const statusOptions = computed(() =>
   (['Backlog', 'Todo', 'In Progress', 'Done', 'Canceled'] as GPTask['status'][]).map(
@@ -294,12 +429,32 @@ const spaceOptions = useGroupedSpaceOptions({ filterFn: (space) => !space.archiv
 const { formattedSprintOptions, loadSprints } = useSprintOptions()
 const { formattedDiscussionOptions, loadDiscussions } = useDiscussionOptions()
 
+// 🧠 Watcher for task changes
 watch(
-  () => task.doc.project,
-  async (project) => {
-    if (project) {
-      await loadSprints(project)
-      await loadDiscussions(project)
+  () => task.doc,
+  async (doc) => {
+    if (doc?.sub_tasks?.length) {
+      doc.sub_tasks.forEach((sub) => {
+        // If loaded from DB as collaborators string, rebuild structured array
+        if (typeof sub.collaborators === 'string' ) {
+          const users = sub.collaborators
+            .split(',')
+            .map((u) => u.trim())
+            .filter(Boolean)
+
+          sub.sub_task_collaborate = users.map((user) => ({
+            doctype: 'GP Sub Task Member',
+            user,
+          }))
+        }
+      })
+      console.log('✅ Normalized sub_tasks after load:', doc.sub_tasks)
+    }
+
+    // Load project-related data
+    if (doc?.project) {
+      await loadSprints(doc.project)
+      await loadDiscussions(doc.project)
     }
   },
   { immediate: true },
@@ -315,9 +470,8 @@ function changeMembers(selected: any[] | null) {
     const user = typeof item === 'string' ? item : item?.value || item?.name
     return { doctype: 'GP Task Member', user }
   })
-  task.setValue.submit({ members: memberDocs })
+  task.setValue.submit({ task_collaborate: memberDocs })
 }
-
 
 function changeDiscussion(option: { value: string } | null) {
   task.setValue.submit({ gp_discussion: option?.value || '' })
@@ -353,4 +507,122 @@ function copyTaskId() {
       .catch(() => toast.error('Failed to copy!'))
   }
 }
+
+// --- Sub Task Management ---
+function addSubTask() {
+  if (!task.doc.sub_tasks) task.doc.sub_tasks = []
+
+  const lastSub = task.doc.sub_tasks.at(-1)
+  if (lastSub && !lastSub.title?.trim()) return
+
+  const data = {
+    doctype: 'GP Sub Task',
+    title: '',
+    members: [],
+    status: 'Todo',
+    due_date: null,
+    idx: task.doc.sub_tasks.length + 1,
+  }
+
+  task.doc.sub_tasks.push(data)
+  saveSubTasks(task.doc.sub_tasks)
+}
+
+function removeSubTask(index) {
+  if (!task.doc.sub_tasks?.length) return
+
+  task.doc.sub_tasks.splice(index, 1)
+  task.doc.sub_tasks.forEach((sub, i) => (sub.idx = i + 1))
+  saveSubTasks(task.doc.sub_tasks)
+}
+
+// --- Save Logic ---
+function saveSubTasks(subTasks) {
+  const cleanSubs = normalizeSubTasks(subTasks)
+
+  if (!cleanSubs.length) {
+    console.warn('⚠️ No sub tasks to save.')
+    return
+  }
+
+  console.log('🧾 Saving Sub Tasks:', cleanSubs)
+  task.setValue.submit({ sub_tasks: cleanSubs })
+}
+
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'Done':
+      return 'bg-green-100 text-green-700'
+    case 'In Progress':
+      return 'bg-blue-100 text-blue-700'
+    case 'Todo':
+      return 'bg-yellow-100 text-yellow-700'
+    case 'Backlog':
+      return 'bg-gray-100 text-gray-600'
+    default:
+      return 'bg-gray-100 text-gray-600'
+  }
+}
+
+function statusDotClass(status: string) {
+  switch (status) {
+    case 'Done':
+      return 'bg-green-500'
+    case 'In Progress':
+      return 'bg-blue-500'
+    case 'Todo':
+      return 'bg-yellow-500'
+    case 'Backlog':
+      return 'bg-gray-400'
+    default:
+      return 'bg-gray-400'
+  }
+}
+
+
+function normalizeSubTasks(subTasks) {
+  return (subTasks || []).map((sub) => {
+    let sub_task_collaborate = sub.sub_task_collaborate
+
+    // Convert from collaborators string (DB) → structured array
+    if (typeof sub.collaborators === 'string' && !Array.isArray(sub_task_collaborate)) {
+      const users = sub.collaborators
+        .split(',')
+        .map((u) => u.trim())
+        .filter(Boolean)
+
+      sub_task_collaborate = users.map((user) => ({
+        doctype: 'GP Sub Task Member',
+        user,
+      }))
+    }
+
+    // Always keep string version in sync for readability/logging
+    const collaboratorsString = Array.isArray(sub_task_collaborate)
+      ? sub_task_collaborate.map((c) => c.user).join(', ')
+      : sub.collaborators || ''
+
+    return {
+      ...sub,
+      sub_task_collaborate,
+      collaborators: collaboratorsString,
+    }
+  })
+}
+
+// --- Autocomplete Change ---
+function handleCollaboratorChange(sub, selected) {
+  const collaborators = Array.isArray(selected) ? selected : []
+
+  sub.sub_task_collaborate = collaborators.map((user) => ({
+    doctype: 'GP Sub Task Member',
+    user: typeof user === 'string' ? user : user?.value || user?.name,
+  }))
+
+  sub.collaborators = sub.sub_task_collaborate.map((c) => c.user).join(', ')
+  console.log('👥 Updated collaborators:', sub.collaborators)
+
+  saveSubTasks(task.doc.sub_tasks)
+}
 </script>
+

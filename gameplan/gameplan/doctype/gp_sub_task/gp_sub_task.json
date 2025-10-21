@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-20 14:03:01.577996",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "task",
+  "title",
+  "status",
+  "sub_task_collaborate",
+  "due_date",
+  "collaborators"
+ ],
+ "fields": [
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Backlog\nTodo\nIn Progress\nDone"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Due Date"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "sub_task_collaborate",
+   "fieldtype": "Table MultiSelect",
+   "label": "Sub Task Collaborate",
+   "options": "GP Member"
+  },
+  {
+   "fieldname": "task",
+   "fieldtype": "Link",
+   "label": "Task",
+   "options": "GP Task"
+  },
+  {
+   "fieldname": "collaborators",
+   "fieldtype": "Data",
+   "label": "collaborators"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-21 14:34:51.553512",
+ "modified_by": "Administrator",
+ "module": "Gameplan",
+ "name": "GP Sub Task",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

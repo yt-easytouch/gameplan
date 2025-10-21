@@ -6,5 +6,5 @@
 // biome-ignore lint: disable
 export {}
 declare global {
-
+  const LucideListRocket: typeof import('~icons/lucide/list-rocket')['default']
 }

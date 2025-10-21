@@ -13,7 +13,7 @@ interface DocType {
     idx?: number;
   }
   
-// Last updated: 2025-10-18 12:41:57.142105
+// Last updated: 2025-10-21 12:03:24.783244
 export interface GPTask extends DocType {
   /** Title: Data */
   title: string;
@@ -49,11 +49,12 @@ export interface GPTask extends DocType {
   sprint?: string;
   /** Type: Select */
   type?: 'Task' | 'Bug';
-  /** Discussion: Link (GP Discussion) */
-  gp_discussion: string 
-  
-  /** Member: Link (GP Member) */
-  members: string
+  /** GP Discussion: Link (GP Discussion) */
+  gp_discussion?: string;
+  /** Sub Tasks: Table (GP Sub Task) */
+  sub_tasks: GPSubTask[];
+  /** Task Collaborate: Table MultiSelect (GP Member) */
+  task_collaborate: GPMember[];
 }
 
 // Last updated: 2023-01-16 13:19:48.202430
@@ -372,4 +373,16 @@ export interface GPTagLink extends ChildDocType {
 export interface GPTag extends DocType {
   /** Label: Data */
   label?: string
+}
+
+// Last updated: 2025-10-21 13:23:36.117337
+export interface GPSubTask extends ChildDocType {
+  /** Title: Data */
+  title: string;
+  /** Status: Select */
+  status?: 'Backlog' | 'Todo' | 'In Progress' | 'Done';
+  /** Due Date: Date */
+  due_date?: string;
+  /** Sub Task Collaborate: Table MultiSelect (GP Member) */
+  sub_task_collaborate: GPMember[];
 }

@@ -173,6 +173,7 @@ const navigation = computed(() => {
       count: unreadNotifications.data || 0,
       isActive: testRoute(/Notifications/g),
     },
+   
     {
       name: 'Tasks',
       icon: LucideListTodo,
