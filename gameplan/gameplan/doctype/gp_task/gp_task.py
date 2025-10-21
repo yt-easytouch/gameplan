@@ -139,3 +139,14 @@ def slugify(text):
 	# Remove all non-word characters except underscores
 	text = re.sub(r'[^\w_]', '', text)
 	return text
+
+
+def update_task_status_if_subtasks_done(doc, method=None):
+    if not doc.get("sub_tasks"):
+        return
+    all_done = all(sub.status == "Done" for sub in doc.sub_tasks)
+    current_status = frappe.db.get_value("GP Task", doc.name, "status")
+    status = "Done" if all_done and current_status != "Done" else "In Progress"
+    frappe.db.set_value("GP Task", doc.name, "status", status)
+    frappe.db.commit()
+        

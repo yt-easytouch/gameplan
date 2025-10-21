@@ -139,6 +139,9 @@ doc_events = {
 		],
 		"on_update": "gameplan.gameplan.doctype.gp_user_profile.gp_user_profile.on_user_update",
 	},
+    "GP Task": {
+        "on_update": "gameplan.gameplan.doctype.gp_task.gp_task.update_task_status_if_subtasks_done"
+    }
 }
 
 on_login = "gameplan.www.g.on_login"
