@@ -18,20 +18,26 @@
         />
 
         <!-- 🧩 Project -->
-        <Autocomplete
-          placeholder="Project"
+       <Autocomplete
+          placeholder="Select Project"
           :options="spaceOptions"
           v-model="newTask.doc.project"
+          :disabled="!newTask.doc.is_saved" <!-- Optional: disable until saved -->
         >
           <template #prefix>
-            <div class="mr-2 leading-4 font-[emoji]" v-if="newTask.doc.project">
+            <div
+              class="mr-2 leading-4 font-[emoji]"
+              v-if="newTask.doc.project && !isNewTask"
+            >
               {{ useSpace(newTask.doc.project?.value ?? newTask.doc.project).value.icon }}
             </div>
           </template>
+
           <template #item-prefix="{ option }">
             <div class="leading-4 font-[emoji]">{{ option.icon }}</div>
           </template>
         </Autocomplete>
+
 
         <!-- 🧩 Sprint (filtered by project) -->
         <Autocomplete

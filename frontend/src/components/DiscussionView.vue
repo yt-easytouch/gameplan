@@ -98,13 +98,23 @@
                 </span>
               </h1>
               <!-- 🧩 Issue Type Combobox -->
-               <Combobox
-                 :options="formattedIssueTypeOptions"
-                 v-model="discussion.doc.issue_type"
-                 placeholder="Select Issue Type"
-                 :disabled="!editingPost"
-                 class="m-4 w-full max-w-sm"
-               />
+                <div class="m-4 w-full max-w-sm">
+                    <template v-if="editingPost">
+                      <Combobox
+                        :options="formattedIssueTypeOptions"
+                        v-model="discussion.doc.issue_type"
+                        placeholder="Select Issue Type"
+                        class="w-full"
+                      />
+                    </template>
+
+                    <template v-else>
+                      <label class="block text-gray-800 font-medium">
+                        {{ discussion.doc.issue_type || 'No issue type selected' }}
+                      </label>
+                    </template>
+                  </div>
+
               
             </div>
             

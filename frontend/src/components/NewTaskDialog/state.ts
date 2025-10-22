@@ -1,7 +1,10 @@
 import { GPTask } from '@/types/doctypes'
 import { useNewDoc } from 'frappe-ui/src/data-fetching'
 import { ref } from 'vue'
+import { useSessionUser } from '@/data/users'
 
+const user = useSessionUser()
+console.log("userka : ",user.name)
 export const showDialog = ref(false)
 export const newTask = ref<ReturnType<typeof newDraftTask> | null>(null)
 export const _onSuccess = ref<(doc: GPTask) => void>(() => {})
@@ -18,7 +21,7 @@ function newDraftTask() {
     title: '',
     description: '',
     status: 'Backlog',
-    assigned_to: '',
+    assigned_to: user.name,
     project: '',
     sprint: '',
     gp_discussion: '',

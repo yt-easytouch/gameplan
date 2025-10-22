@@ -154,7 +154,10 @@ const dropdownOptions = computed(() => [
     label: 'Edit',
     icon: 'edit',
     onClick: () => setEditing(props.comment.name, true),
-    condition: () => !props.comment.deleted_at && !props.readOnlyMode,
+    condition: () =>
+      isSessionUser(props.comment.owner) && // ✅ Only the owner can edit
+      !props.comment.deleted_at &&
+      !props.readOnlyMode,
   },
   {
     label: 'Revisions',
@@ -187,7 +190,10 @@ const dropdownOptions = computed(() => [
       })
     },
     condition: () =>
-      isSessionUser(props.comment.owner) && props.comment.deleted_at == null && !props.readOnlyMode,
+      isSessionUser(props.comment.owner) &&
+      props.comment.deleted_at == null &&
+      !props.readOnlyMode,
   },
 ])
+
 </script>

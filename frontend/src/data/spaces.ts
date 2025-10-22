@@ -1,9 +1,10 @@
 import { computed, MaybeRefOrGetter, toValue } from 'vue'
 import { useCall, useList } from 'frappe-ui/src/data-fetching'
 import { GPProject, GPMember } from '@/types/doctypes'
-
+import { useSessionUser } from './users' 
 interface Member extends Pick<GPMember, 'user'> {}
 
+const user = useSessionUser()
 export interface Space
   extends Pick<
     GPProject,
@@ -36,6 +37,7 @@ export let spaces = useList<Space>({
     'discussions_count',
     { members: ['user'] },
   ],
+  filters:{"members.user":["in",user.name]},
   initialData: [],
   orderBy: 'title asc',
   limit: 99999,

@@ -548,98 +548,176 @@ def get_gp_projects_with_members():
         })
 
 
+import frappe, json
+
 @frappe.whitelist(allow_guest=False)
 def proxy_document():
-    """
-    Proxy API that supports dynamic nested linked child tables.
-    Automatically detects child doctype from DocField metadata.
-    """
+	"""
+	Proxy API that supports:
+	✅ Dynamic nested child tables in fields
+	✅ Filters on both parent and child tables
+	✅ Auto-detection of child doctypes via DocField metadata
+	"""
 
-    # Get request params
-    doctype = frappe.form_dict.get("parent")
-    fields_param = frappe.form_dict.get("fields")
-    filters_param = frappe.form_dict.get("filters")
-    order_by = frappe.form_dict.get("order_by") or "creation asc"
-    start = int(frappe.form_dict.get("start") or 0)
-    limit = int(frappe.form_dict.get("limit") or 20)
-    
+	doctype = frappe.form_dict.get("parent")
+	fields_param = frappe.form_dict.get("fields")
+	filters_param = frappe.form_dict.get("filters")
+	order_by = frappe.form_dict.get("order_by") or "creation asc"
+	start = int(frappe.form_dict.get("start") or 0)
+	limit = int(frappe.form_dict.get("limit") or 20)
 
-    # Parse filters JSON string to dict
-    filters = {}
-    if filters_param:
-        try:
-            filters = json.loads(filters_param)
-        except Exception:
-            filters = {}
+	# Parse filters JSON string
+	try:
+		filters = json.loads(filters_param) if filters_param else {}
+	except Exception:
+		filters = {}
 
-    # Parse fields, separate main fields and child table requests
-    fields = []
-    child_fields_map = {}  # { child_fieldname: [list_of_fields] }
+	# Parse fields, separate main fields and child table requests
+	fields = []
+	child_fields_map = {}  # { child_fieldname: [list_of_fields] }
 
-    if fields_param:
-        try:
-            fields_list = json.loads(fields_param)
-        except Exception:
-            fields_list = []
+	if fields_param:
+		try:
+			fields_list = json.loads(fields_param)
+		except Exception:
+			fields_list = []
 
-        for f in fields_list:
-            if isinstance(f, dict):
-                # Nested child fields found, e.g. {"reactions": ["name", "user", "emoji"]}
-                for child_fieldname, child_fields in f.items():
-                    child_fields_map[child_fieldname] = child_fields
-            else:
-                fields.append(f)
-    else:
-        fields = ["name"]
+		for f in fields_list:
+			if isinstance(f, dict):
+				for child_fieldname, child_fields in f.items():
+					child_fields_map[child_fieldname] = child_fields
+			else:
+				fields.append(f)
+	else:
+		fields = ["name"]
 
-    # Fetch main documents with main fields only
-    docs = frappe.get_all(
-        doctype,
-        fields=fields,
-        filters=filters,
-        order_by=order_by,
-        limit_start=start,
-        limit_page_length=limit,
-    )
+	# Helper to find child doctype for a fieldname
+	def get_child_doctype(parent_doctype, child_fieldname):
+		return frappe.db.get_value(
+			"DocField",
+			{
+				"parent": parent_doctype,
+				"fieldname": child_fieldname,
+				"fieldtype": "Table"
+			},
+			"options"
+		)
 
-    def get_child_doctype(parent_doctype, child_fieldname):
-        """
-        Query DocField to find child doctype linked to parent_doctype and child_fieldname
-        """
-        return frappe.db.get_value(
-            "DocField",
-            {
-                "parent": parent_doctype,
-                "fieldname": child_fieldname,
-                "fieldtype": "Table"
-            },
-            "options"
-        )
+	# --- Detect if filters target child tables ---
+	child_filters = {}
+	parent_filters = {}
 
-    # For each child field, fetch related child docs and attach
-    for child_fieldname, child_fields in child_fields_map.items():
-        child_doctype = get_child_doctype(doctype, child_fieldname)
-        if not child_doctype:
-            # Could not find child doctype for that fieldname, skip
-            continue
+	for key, val in filters.items():
+		if "." in key:
+			child_fieldname, child_field = key.split(".", 1)
+			child_filters.setdefault(child_fieldname, {})[child_field] = val
+		else:
+			parent_filters[key] = val
 
-        for doc in docs:
-            child_docs = frappe.get_all(
-                child_doctype,
-                fields=child_fields,
-                filters={
-                    "parent": doc["name"],
-                    "parentfield": child_fieldname,
-                    "parenttype": doctype,
-                },
-                order_by="creation asc",
-            )
-            doc[child_fieldname] = child_docs
+	# --- Case 1: Only parent filters ---
+	if not child_filters:
+		docs = frappe.get_all(
+			doctype,
+			fields=fields,
+			filters=parent_filters,
+			order_by=order_by,
+			limit_start=start,
+			limit_page_length=limit,
+		)
+	else:
+		# --- Case 2: Child table filters exist ---
+		child_joins = []
+		where_clauses = []
+		values = []
 
-    frappe.response.update({
-            "data": docs,
-        })
-	
+		# Start query for parent table
+		query = f"SELECT DISTINCT p.* FROM `tab{doctype}` p"
+
+		# For each child filter group, join child table
+		for child_fieldname, cf in child_filters.items():
+			child_doctype = get_child_doctype(doctype, child_fieldname)
+			if not child_doctype:
+				continue
+
+			alias = f"c_{child_fieldname}"
+			child_joins.append(
+				f"JOIN `tab{child_doctype}` {alias} ON {alias}.parent = p.name"
+			)
+
+			for field, condition in cf.items():
+				if isinstance(condition, list) and len(condition) == 2:
+					operator, value = condition
+					sql_op = map_operator(operator)
+
+					if sql_op == "IN":
+						# Ensure list/tuple format for IN
+						if not isinstance(value, (list, tuple)):
+							value = [value]
+						placeholders = ", ".join(["%s"] * len(value))
+						where_clauses.append(f"{alias}.{field} IN ({placeholders})")
+						values.extend(value)
+					else:
+						where_clauses.append(f"{alias}.{field} {sql_op} %s")
+						values.append(value)
+				else:
+					where_clauses.append(f"{alias}.{field} = %s")
+					values.append(condition)
+
+
+		# Add parent filters (if any)
+		for key, condition in parent_filters.items():
+			if isinstance(condition, list) and len(condition) == 2:
+				operator, value = condition
+				where_clauses.append(f"p.{key} {map_operator(operator)} %s")
+				values.append(value)
+			else:
+				where_clauses.append(f"p.{key} = %s")
+				values.append(condition)
+
+		# Build full query
+		query += " " + " ".join(child_joins)
+		if where_clauses:
+			query += " WHERE " + " AND ".join(where_clauses)
+		query += f" ORDER BY p.{order_by} LIMIT {start}, {limit}"
+
+		docs = frappe.db.sql(query, values, as_dict=True)
+
+	# --- Fetch child data for each document ---
+	for child_fieldname, child_fields in child_fields_map.items():
+		child_doctype = get_child_doctype(doctype, child_fieldname)
+		if not child_doctype:
+			continue
+
+		for doc in docs:
+			child_docs = frappe.get_all(
+				child_doctype,
+				fields=child_fields,
+				filters={
+					"parent": doc["name"],
+					"parentfield": child_fieldname,
+					"parenttype": doctype,
+				},
+				order_by="creation asc",
+			)
+			doc[child_fieldname] = child_docs
+
+	frappe.response.update({"data": docs})
+
+
+def map_operator(op):
+	"""Translate simple operators from JSON filter syntax to SQL."""
+	op_map = {
+		"=": "=",
+		"in": "IN",
+		"like": "LIKE",
+		">": ">",
+		"<": "<",
+		">=": ">=",
+		"<=": "<=",
+		"!=": "!=",
+	}
+	return op_map.get(op, "=")
+
 
 @frappe.whitelist()
 def get_issue_type():
