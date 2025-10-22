@@ -318,6 +318,7 @@
 
         <!-- Members -->
         <div>collaborators</div>
+        <div>Collaborators</div>
         <div>
           <Autocomplete
             :options="assignableUsers"
