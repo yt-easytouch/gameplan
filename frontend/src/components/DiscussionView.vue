@@ -282,6 +282,7 @@ import LucideArrowUp from '~icons/lucide/arrow-up'
 import LucideLock from '~icons/lucide/lock'
 import Combobox from 'frappe-ui/src/components/Combobox/Combobox.vue'
 import { useIssueTypeOptions } from '@/composables/useIssueTypeOptions'
+import { isSessionUser } from '@/data/session'
 
 // ✅ Import issue type composable
 const { formattedIssueTypeOptions, loading } = useIssueTypeOptions()
@@ -382,11 +383,31 @@ const spaceOptions = useGroupedSpaceOptions({
 })
 
 // Dropdown actions
-const actions = computed(() => [
-  { label: 'Edit', icon: 'edit', onClick: () => (editingPost.value = true) },
-  { label: 'Revisions', icon: 'rotate-ccw', onClick: () => (showRevisionsDialog.value = true) },
-  { label: 'Copy link', icon: 'link', onClick: copyLink },
-])
+const actions = computed(() => {
+  const list = [
+    {
+      label: 'Revisions',
+      icon: 'rotate-ccw',
+      onClick: () => (showRevisionsDialog.value = true),
+    },
+    {
+      label: 'Copy link',
+      icon: 'link',
+      onClick: copyLink,
+    },
+  ];
+
+  // Only add Edit if the current user is the owner
+  if (isSessionUser(discussion.doc.owner)) {
+    list.unshift({
+      label: 'Edit',
+      icon: 'edit',
+      onClick: () => (editingPost.value = true),
+    });
+  }
+
+  return list;
+});
 
 usePageMeta(() => {
   if (!discussion.doc) return

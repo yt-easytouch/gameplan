@@ -289,7 +289,7 @@
           <Autocomplete
             placeholder="Select space"
             :options="spaceOptions"
-            :modelValue="task.doc.project"
+            :modelValue="selectedSpace"
             @update:modelValue="changeSpace"
           />
         </div>
@@ -317,7 +317,6 @@
         </div>
 
         <!-- Members -->
-        <div>collaborators</div>
         <div>Collaborators</div>
         <div>
           <Autocomplete
@@ -400,6 +399,26 @@ task.onSuccess((doc) => {
   }
 })
 
+const selectedSpace = computed({
+  get() {
+    if (!spaceOptions.value) return null
+
+    const projectValue = String(task?.doc?.project || '')
+
+    const allOptions = spaceOptions.value.flatMap(opt =>
+      opt.items ? opt.items : [opt]
+    )
+    return allOptions.find(i => i.value === projectValue) || null
+  },
+  set(option: { value: string } | null) {
+    changeSpace(option)
+  }
+})
+
+
+
+
+
 // 🧩 Computed Options
 const assignableUsers = computed(() =>
   activeUsers.value.map((user) => ({
@@ -430,7 +449,6 @@ const spaceOptions = useGroupedSpaceOptions({ filterFn: (space) => !space.archiv
 const { formattedSprintOptions, loadSprints } = useSprintOptions()
 const { formattedDiscussionOptions, loadDiscussions } = useDiscussionOptions()
 
-// 🧠 Watcher for task changes
 watch(
   () => task.doc,
   async (doc) => {
@@ -449,7 +467,6 @@ watch(
           }))
         }
       })
-      console.log('✅ Normalized sub_tasks after load:', doc.sub_tasks)
     }
 
     // Load project-related data
@@ -483,22 +500,29 @@ function changeSprint(option: { value: string } | null) {
 }
 
 function changeSpace(option: { value: string } | null) {
-  if (!task.doc) return
-  task.doc.project = option?.value || undefined
-  task.setValue.submit({ project: option?.value || '' }).then(updateRoute)
+  if (!task?.doc) return
+  task.doc.project = String(option?.value || '')
+  task.doc.sprint = ''  
+  task.doc.gp_discussion = ''  
+  task.setValue.submit({ project: task.doc.project, sprint: '',gp_discussion: '' })
+    .then(() => updateRoute())
+    .catch(err => console.error('Failed to update project:', err))
 }
 
-// --- Helpers ---
+
+
 function updateRoute() {
-  if (task.doc) {
-    router.replace({
-      name: task.doc.project ? 'SpaceTask' : 'Task',
-      params: task.doc.project
-        ? { taskId: task.doc.name, spaceId: task.doc.project }
-        : { taskId: task.doc.name },
-    })
-  }
+  if (!task?.doc) return
+
+  router.replace({
+    name: task.doc.project ? 'SpaceTask' : 'Task',
+    params: task.doc.project
+      ? { taskId: task.doc.name, spaceId: task.doc.project }
+      : { taskId: task.doc.name },
+  })
 }
+
+
 
 function copyTaskId() {
   if (task.doc.taskid) {
@@ -542,11 +566,9 @@ function saveSubTasks(subTasks) {
   const cleanSubs = normalizeSubTasks(subTasks)
 
   if (!cleanSubs.length) {
-    console.warn('⚠️ No sub tasks to save.')
     return
   }
 
-  console.log('🧾 Saving Sub Tasks:', cleanSubs)
   task.setValue.submit({ sub_tasks: cleanSubs })
 }
 
@@ -621,7 +643,6 @@ function handleCollaboratorChange(sub, selected) {
   }))
 
   sub.collaborators = sub.sub_task_collaborate.map((c) => c.user).join(', ')
-  console.log('👥 Updated collaborators:', sub.collaborators)
 
   saveSubTasks(task.doc.sub_tasks)
 }

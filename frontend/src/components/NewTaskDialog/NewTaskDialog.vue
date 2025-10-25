@@ -100,22 +100,24 @@ import {
   ErrorMessage,
   Button,
 } from 'frappe-ui'
-import { activeUsers } from '@/data/users'
+import { activeUsers, useSessionUser } from '@/data/users'
 import { useGroupedSpaceOptions } from '@/data/groupedSpaces'
-import { useSpace } from '@/data/spaces'
+import { spaces, useSpace } from '@/data/spaces'
 import KeyboardShortcut from '../KeyboardShortcut.vue'
 import { showDialog, newTask, _onSuccess } from './state'
 import { useSprintOptions } from '@/composables/useSprintOptions'
 import { useDiscussionOptions } from '@/composables/useDiscussionOptions'
-
+const user = useSessionUser()
 // --- Refs
 const titleInput = useTemplateRef('titleInput')
+const isNewTask = ref(true) 
 
 // --- Project options
 const spaceOptions = useGroupedSpaceOptions({
   filterFn: (space) => !space.archived_at,
 })
 
+let projectId = ""
 // --- Sprint options (reactive to project)
 const { formattedSprintOptions, loadSprints } = useSprintOptions()
 const { formattedDiscussionOptions, loadDiscussions } = useDiscussionOptions()
@@ -124,19 +126,21 @@ watch(
   () => newTask.value?.doc.project,
   async (project) => {
     if (project?.value || project) {
-      await loadSprints(project.value || project)
-      await loadDiscussions(project.value || project)
+       projectId = project.value || project
+      await loadSprints(projectId)
+      await loadDiscussions(projectId)
     }
   },
   { immediate: true }
 )
 
+
 // --- Assignable users
 const assignableUsers = computed(() =>
-  activeUsers.value.map((user) => ({
-    label: user.full_name,
-    value: user.name,
-  })),
+activeUsers.value.map((user) => ({
+  label: user.full_name,
+  value: user.name,
+})),
 )
 
 // --- Create handler
@@ -146,12 +150,12 @@ function onCreateClick(e: KeyboardEvent) {
     newTask.value.error = new Error('Task title is required')
     return
   }
-
-  newTask.value.doc.assigned_to = newTask.value.doc.assigned_to?.value
-  newTask.value.doc.project = newTask.value.doc.project?.value
+  
+  newTask.value.doc.assigned_to = newTask.value.doc.assigned_to?.value || user.name
+  newTask.value.doc.project = newTask.value.doc.project?.value || projectId
   newTask.value.doc.sprint = newTask.value.doc.sprint?.value
   newTask.value.doc.gp_discussion = newTask.value.doc.gp_discussion?.value
-
+  
   newTask.value.submit().then((doc) => {
     showDialog.value = false
     _onSuccess.value(doc)

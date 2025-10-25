@@ -105,7 +105,6 @@ function clearCache() {
   localStorage.clear()
   sessionStorage.clear()
   clearIndexDb().then(() => {
-    console.log('Cache cleared')
     window.location.reload()
   })
 }

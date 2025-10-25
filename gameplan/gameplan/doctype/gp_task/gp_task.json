@@ -49,6 +49,7 @@
    "label": "Start Date"
   },
   {
+   "default": "Today",
    "fieldname": "due_date",
    "fieldtype": "Date",
    "label": "Due Date"
@@ -167,7 +168,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-21 12:03:24.783244",
+ "modified": "2025-10-25 11:09:10.062031",
  "modified_by": "Administrator",
  "module": "Gameplan",
  "name": "GP Task",

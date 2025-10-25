@@ -128,9 +128,24 @@ const props = defineProps<Props>()
 const showRevisionsDialog = ref(false)
 const editableComment = ref<ReturnType<typeof props.comments.edit> | null>(null)
 
+
+
 const setEditing = (name: string, value: boolean) => {
   if (value) {
-    editableComment.value = props.comments.edit(name)
+    const commentDoc = props.comments.data.find(c => c.name === name)
+    if (commentDoc) {
+      editableComment.value = {
+        doc: { ...commentDoc },
+        setValue: async () => {
+          Object.assign(commentDoc, editableComment.value!.doc)
+          return Promise.resolve()
+        },
+        update: async () => {
+          Object.assign(commentDoc, editableComment.value!.doc)
+          return Promise.resolve()
+        },
+      }
+    }
   } else {
     editableComment.value = null
   }
@@ -149,51 +164,65 @@ const copyLink = (comment: GPComment) => {
   copyToClipboard(url)
 }
 
-const dropdownOptions = computed(() => [
-  {
-    label: 'Edit',
-    icon: 'edit',
-    onClick: () => setEditing(props.comment.name, true),
-    condition: () =>
-      isSessionUser(props.comment.owner) && // ✅ Only the owner can edit
-      !props.comment.deleted_at &&
-      !props.readOnlyMode,
-  },
-  {
-    label: 'Revisions',
-    icon: 'rotate-ccw',
-    onClick: () => (showRevisionsDialog.value = true),
-    condition: () => props.comment.modified > props.comment.creation,
-  },
-  {
+const dropdownOptions = computed(() => {
+  const list = [];
+
+  if (
+    isSessionUser(props.comment.owner) &&
+    !props.comment.deleted_at &&
+    !props.readOnlyMode
+  ) {
+    list.push({
+      label: 'Edit',
+      icon: 'edit',
+      onClick: () => setEditing(props.comment.name, true),
+    });
+  }
+
+  if (props.comment.modified > props.comment.creation) {
+    list.push({
+      label: 'Revisions',
+      icon: 'rotate-ccw',
+      onClick: () => (showRevisionsDialog.value = true),
+    });
+  }
+
+  list.push({
     label: 'Copy link',
     icon: 'link',
     onClick: () => copyLink(props.comment),
-  },
-  {
-    label: 'Delete',
-    icon: 'trash',
-    onClick: () => {
-      createDialog({
-        title: 'Delete comment',
-        message: 'Are you sure you want to delete this comment?',
-        actions: [
-          {
-            label: 'Delete',
-            variant: 'solid',
-            theme: 'red',
-            onClick: ({ close }) => {
-              return props.comments.delete.submit({ name: props.comment.name }).then(close)
+  });
+
+  if (
+    isSessionUser(props.comment.owner) &&
+    !props.comment.deleted_at &&
+    !props.readOnlyMode
+  ) {
+    list.push({
+      label: 'Delete',
+      icon: 'trash',
+      onClick: () => {
+        createDialog({
+          title: 'Delete comment',
+          message: 'Are you sure you want to delete this comment?',
+          actions: [
+            {
+              label: 'Delete',
+              variant: 'solid',
+              theme: 'red',
+              onClick: ({ close }) => {
+                return props.comments.delete
+                  .submit({ name: props.comment.name })
+                  .then(close);
+              },
             },
-          },
-        ],
-      })
-    },
-    condition: () =>
-      isSessionUser(props.comment.owner) &&
-      props.comment.deleted_at == null &&
-      !props.readOnlyMode,
-  },
-])
+          ],
+        });
+      },
+    });
+  }
+
+  return list;
+});
 
 </script>

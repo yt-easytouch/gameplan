@@ -91,7 +91,6 @@ export function useUIBehavior(
         })
 
         editor.on('update', () => {
-          console.log('update')
           nextTick(() => debouncedAutosave())
         })
       }

@@ -4,7 +4,6 @@ import { ref } from 'vue'
 import { useSessionUser } from '@/data/users'
 
 const user = useSessionUser()
-console.log("userka : ",user.name)
 export const showDialog = ref(false)
 export const newTask = ref<ReturnType<typeof newDraftTask> | null>(null)
 export const _onSuccess = ref<(doc: GPTask) => void>(() => {})
