@@ -13,7 +13,7 @@ interface DocType {
     idx?: number;
   }
   
-// Last updated: 2025-10-21 12:03:24.783244
+// Last updated: 2025-10-25 11:09:10.062031
 export interface GPTask extends DocType {
   /** Title: Data */
   title: string;
@@ -375,7 +375,7 @@ export interface GPTag extends DocType {
   label?: string
 }
 
-// Last updated: 2025-10-21 13:23:36.117337
+// Last updated: 2025-10-21 14:34:51.553512
 export interface GPSubTask extends ChildDocType {
   /** Title: Data */
   title: string;
@@ -385,4 +385,8 @@ export interface GPSubTask extends ChildDocType {
   due_date?: string;
   /** Sub Task Collaborate: Table MultiSelect (GP Member) */
   sub_task_collaborate: GPMember[];
+  /** Task: Link (GP Task) */
+  task?: string;
+  /** collaborators: Data */
+  collaborators?: string;
 }

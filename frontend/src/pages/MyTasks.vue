@@ -44,7 +44,7 @@ let taskList = useTemplateRef<typeof TaskList>('taskList')
 let currentTab = ref('all')
 
 let filters = () => {
-  let me = useUser('sessionUser').name
+  let me = useUser('sessionUsersessionUser').name
   return {
     all: { assigned_or_owner: me },
     assigned: { assigned_to: me },

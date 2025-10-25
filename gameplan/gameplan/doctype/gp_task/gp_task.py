@@ -11,6 +11,15 @@ from gameplan.mixins.mentions import HasMentions
 from gameplan.search_sqlite import GameplanSearch, GameplanSearchIndexMissingError
 import re
 
+def simple_slugify(text):
+    """Convert text to a URL-friendly slug (lowercase, hyphens)."""
+    if not text:
+        return ""
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text)  # Replace non-alphanumeric with hyphen
+    text = re.sub(r"-+", "-", text)           # Remove multiple hyphens
+    return text.strip("-")
+
 class GPTask(HasMentions, HasActivity, Document):
 	on_delete_cascade = ["GP Comment", "GP Activity"]
 	on_delete_set_null = ["GP Notification"]
@@ -24,8 +33,8 @@ class GPTask(HasMentions, HasActivity, Document):
 			# Get project code
 			project_code = frappe.db.get_value("GP Project", self.project, "code")
 			if project_code:
-				clean_project = slugify(project_code)
-				clean_title = slugify(self.title)
+				clean_project = simple_slugify(project_code)
+				clean_title = simple_slugify(self.title)
 
 				# Get highest number for that project
 				last_number = frappe.db.sql("""
@@ -44,6 +53,8 @@ class GPTask(HasMentions, HasActivity, Document):
 	def after_insert(self):
 		self.update_tasks_count()
 
+
+	
 	def on_update(self):
 		self.notify_mentions()
 		self.log_value_updates()
@@ -96,50 +107,71 @@ class GPTask(HasMentions, HasActivity, Document):
 		GPNotification.clear_notifications(task=self.name)
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest = True)
 def get_list(
-	fields: str = None,
-	filters: str = None,
-	order_by: str = None,
-	start: int = 0,
-	limit: int = 20,
-	group_by: str = None,
-	parent: str = None,
-	debug=False,
+    fields: str = None,
+    filters: str = None,
+    order_by: str = None,
+    start: int = 0,
+    limit: int = 20,
+    group_by: str = None,
+    parent: str = None,
+    debug=False,
 ):
 	doctype = "GP Task"
 	check_permissions(doctype, parent)
+
 	fields = frappe.parse_json(fields) if fields else None
-	filters = frappe.parse_json(filters) if filters else None
-	assigned_or_owner = filters.pop("assigned_or_owner", None) if filters else None
+	filters = frappe.parse_json(filters) if filters else {}
+	assigned_or_owner = filters.pop("assigned_or_owner", None)
 	limit = int(limit)
-
-	query = frappe.qb.get_query(
-		doctype,
-		fields=fields,
-		filters=filters,
-		order_by=order_by,
-		offset=start,
-		limit=limit + 1,
-		group_by=group_by,
-	)
+	query_filters = filters.copy()
 	if assigned_or_owner:
-		Task = frappe.qb.DocType(doctype)
-		query = query.where((Task.assigned_to == assigned_or_owner) | (Task.owner == assigned_or_owner))
+		query_filters["assigned_to"] = assigned_or_owner
 
-	data = query.run(as_dict=True, debug=debug)
-	frappe.response["has_next_page"] = len(data) > limit
-	return data[:limit]
+	tasks = frappe.get_all(
+		doctype,
+		fields=fields or ["name", "subject", "status", "owner"],
+		filters=query_filters,
+		order_by=order_by,
+		limit_start=start,
+		limit_page_length=limit + 1,
+	)
 
-def slugify(text):
-	# Lowercase
-	text = text.lower()
-	# Replace spaces and dashes with underscore
-	text = re.sub(r'[\s\-]+', '_', text)
-	# Remove all non-word characters except underscores
-	text = re.sub(r'[^\w_]', '', text)
-	return text
+	task_names = [t["name"] for t in tasks]
 
+	if task_names:
+		total_sub_tasks = frappe.get_all(
+			"GP Sub Task",
+			fields=["parent", "COUNT(*) as total"],
+			filters={"parent": ["in", task_names]},
+			group_by="parent"
+		)
+
+		done_sub_tasks = frappe.get_all(
+			"GP Sub Task",
+			fields=["parent", "COUNT(*) as done"],
+			filters={
+				"parent": ["in", task_names],
+				"status": "Done"
+			},
+			group_by="parent"
+		)
+
+		# Convert to dict for lookup
+		total_map = {t["parent"]: t["total"] for t in total_sub_tasks}
+		done_map = {t["parent"]: t["done"] for t in done_sub_tasks}
+
+		# Merge stats into tasks
+		for t in tasks:
+			name = t["name"]
+			total = total_map.get(str(name), 0)
+			done = done_map.get(str(name), 0)
+			t["total_sub_tasks"] = total
+			t["done_sub_tasks"] = done
+
+	frappe.response["has_next_page"] = len(tasks) > limit
+	return tasks[:limit]
 
 def update_task_status_if_subtasks_done(doc, method=None):
     if not doc.get("sub_tasks"):

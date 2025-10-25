@@ -49,6 +49,8 @@
                     >
                       <TaskStatusIcon :status="d.status" />
                     </button>
+
+                    
                   </Dropdown>
                 </Tooltip>
                 <div
@@ -56,6 +58,18 @@
                 >
                   {{ d.title }}
                 </div>
+
+                    <template v-if="d.total_sub_tasks">
+                  <div class="px-2 leading-none text-ink-gray-5">&middot;</div>
+                  <div class="flex items-center space-x-1">
+                    <!-- Use a checklist icon for sub-tasks -->
+                    <LucideListChecks class="h-4 w-4 text-ink-gray-5" />
+                    <span class="text-sm text-ink-gray-5">
+                      
+                      {{ d.total_sub_tasks }} / {{ d.done_sub_tasks }}
+                    </span>
+                  </div>
+                </template>
               </div>
 
               <div class="ml-6.5 mt-1.5 flex items-center">
@@ -69,6 +83,8 @@
                     {{ d.project_title }}
                   </div>
                 </div>
+
+                
                 <div class="hidden items-center @md:flex" v-if="d.assigned_to">
                   <div class="px-2 leading-none text-ink-gray-5">&middot;</div>
                   <span class="whitespace-nowrap text-base text-ink-gray-5">
@@ -85,6 +101,11 @@
                     >
                   </div>
                 </template>
+
+           
+
+
+
                 <template v-if="d.priority">
                   <div class="px-2 leading-none text-ink-gray-5">&middot;</div>
                   <div class="flex items-center">
