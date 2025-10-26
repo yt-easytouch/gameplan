@@ -552,157 +552,147 @@ import frappe, json
 
 @frappe.whitelist(allow_guest=False)
 def proxy_document():
+    doctype = frappe.form_dict.get("parent")
+    fields_param = frappe.form_dict.get("fields")
+    filters_param = frappe.form_dict.get("filters")
+    order_by = frappe.form_dict.get("order_by") or "creation asc"
+    start = int(frappe.form_dict.get("start") or 0)
+    limit = int(frappe.form_dict.get("limit") or 20)
+
+    try:
+        filters = json.loads(filters_param) if filters_param else {}
+    except Exception:
+        filters = {}
+
+    user = frappe.session.user
+    fields = []
+    child_fields_map = {}
+
+    if fields_param:
+        try:
+            fields_list = json.loads(fields_param)
+        except Exception:
+            fields_list = []
+
+        for f in fields_list:
+            if isinstance(f, dict):
+                for child_fieldname, child_fields in f.items():
+                    child_fields_map[child_fieldname] = child_fields
+            else:
+                fields.append(f)
+    else:
+        fields = ["name"]
+
+    def get_child_doctype(parent_doctype, child_fieldname):
+        return frappe.db.get_value(
+            "DocField",
+            {
+                "parent": parent_doctype,
+                "fieldname": child_fieldname,
+                "fieldtype": "Table"
+            },
+            "options"
+        )
+
+    # --- Public projects ---
+    public_projects = []
+    private_projects = []
+
+    if doctype in ["GP Project", "Project"]:
+        public_projects = frappe.get_all(
+            doctype,
+            filters={"is_private": 0},
+            fields=fields,
+            order_by=order_by,
+            limit_start=start,
+            limit_page_length=limit
+        )
+
+        # Private projects where current user is a member
+        private_projects = frappe.db.sql(f"""
+            SELECT DISTINCT p.*
+            FROM `tab{doctype}` p
+            JOIN `tabGP Member` m ON m.parent = p.name
+            WHERE p.is_private = 1
+              AND m.user = %s
+            ORDER BY p.{order_by}
+            LIMIT %s, %s
+        """, (user, start, limit), as_dict=True)
+
+    docs = public_projects + private_projects
+
+    # --- Apply additional filters for parent/child fields ---
+    # Note: only applies filters if provided in `filters_param`
+    parent_filters = {}
+    child_filters = {}
+
+    for key, val in filters.items():
+        if "." in key:
+            child_fieldname, child_field = key.split(".", 1)
+            child_filters.setdefault(child_fieldname, {})[child_field] = val
+        else:
+            parent_filters[key] = val
+
+    filtered_docs = []
+    for doc in docs:
+        include_doc = True
+        # Parent filters
+        for key, condition in parent_filters.items():
+            doc_val = doc.get(key)
+            if isinstance(condition, list) and len(condition) == 2:
+                op, val = condition
+                if not evaluate_condition(doc_val, op, val):
+                    include_doc = False
+                    break
+            else:
+                if doc_val != condition:
+                    include_doc = False
+                    break
+        if include_doc:
+            filtered_docs.append(doc)
+
+    docs = filtered_docs
+
+    # --- Fetch child data ---
+    for child_fieldname, child_fields in child_fields_map.items():
+        child_doctype = get_child_doctype(doctype, child_fieldname)
+        if not child_doctype:
+            continue
+        for doc in docs:
+            child_docs = frappe.get_all(
+                child_doctype,
+                fields=child_fields,
+                filters={
+                    "parent": doc["name"],
+                    "parentfield": child_fieldname,
+                    "parenttype": doctype,
+                },
+                order_by="creation asc",
+            )
+            doc[child_fieldname] = child_docs
+
+    frappe.response.update({"data": docs})
 
 
-	doctype = frappe.form_dict.get("parent")
-	fields_param = frappe.form_dict.get("fields")
-	filters_param = frappe.form_dict.get("filters")
-	order_by = frappe.form_dict.get("order_by") or "creation asc"
-	start = int(frappe.form_dict.get("start") or 0)
-	limit = int(frappe.form_dict.get("limit") or 20)
-
-	try:
-		filters = json.loads(filters_param) if filters_param else {}
-	except Exception:
-		filters = {}
-
-	if doctype == "Project":
-		user = frappe.session.user
-		parent_filters = {
-			"or": [
-				{"is_private": 0},
-				{"is_private": 1, "members.user": ["in", user]}
-			]
-		}
-
-	fields = []
-	child_fields_map = {}  
-
-	if fields_param:
-		try:
-			fields_list = json.loads(fields_param)
-		except Exception:
-			fields_list = []
-
-		for f in fields_list:
-			if isinstance(f, dict):
-				for child_fieldname, child_fields in f.items():
-					child_fields_map[child_fieldname] = child_fields
-			else:
-				fields.append(f)
-	else:
-		fields = ["name"]
-
-	def get_child_doctype(parent_doctype, child_fieldname):
-		return frappe.db.get_value(
-			"DocField",
-			{
-				"parent": parent_doctype,
-				"fieldname": child_fieldname,
-				"fieldtype": "Table"
-			},
-			"options"
-		)
-
-	# --- Detect if filters target child tables ---
-	child_filters = {}
-	parent_filters = {}
-
-	for key, val in filters.items():
-		if "." in key:
-			child_fieldname, child_field = key.split(".", 1)
-			child_filters.setdefault(child_fieldname, {})[child_field] = val
-		else:
-			parent_filters[key] = val
-
-	# --- Case 1: Only parent filters ---
-	if not child_filters:
-		docs = frappe.get_all(
-			doctype,
-			fields=fields,
-			filters=parent_filters,
-			order_by=order_by,
-			limit_start=start,
-			limit_page_length=limit,
-		)
-	else:
-		# --- Case 2: Child table filters exist ---
-		child_joins = []
-		where_clauses = []
-		values = []
-
-		# Start query for parent table
-		query = f"SELECT DISTINCT p.* FROM `tab{doctype}` p"
-
-		# For each child filter group, join child table
-		for child_fieldname, cf in child_filters.items():
-			child_doctype = get_child_doctype(doctype, child_fieldname)
-			if not child_doctype:
-				continue
-
-			alias = f"c_{child_fieldname}"
-			child_joins.append(
-				f"JOIN `tab{child_doctype}` {alias} ON {alias}.parent = p.name"
-			)
-
-			for field, condition in cf.items():
-				if isinstance(condition, list) and len(condition) == 2:
-					operator, value = condition
-					sql_op = map_operator(operator)
-
-					if sql_op == "IN":
-						# Ensure list/tuple format for IN
-						if not isinstance(value, (list, tuple)):
-							value = [value]
-						placeholders = ", ".join(["%s"] * len(value))
-						where_clauses.append(f"{alias}.{field} IN ({placeholders})")
-						values.extend(value)
-					else:
-						where_clauses.append(f"{alias}.{field} {sql_op} %s")
-						values.append(value)
-				else:
-					where_clauses.append(f"{alias}.{field} = %s")
-					values.append(condition)
-
-
-		# Add parent filters (if any)
-		for key, condition in parent_filters.items():
-			if isinstance(condition, list) and len(condition) == 2:
-				operator, value = condition
-				where_clauses.append(f"p.{key} {map_operator(operator)} %s")
-				values.append(value)
-			else:
-				where_clauses.append(f"p.{key} = %s")
-				values.append(condition)
-
-		# Build full query
-		query += " " + " ".join(child_joins)
-		if where_clauses:
-			query += " WHERE " + " AND ".join(where_clauses)
-		query += f" ORDER BY p.{order_by} LIMIT {start}, {limit}"
-
-		docs = frappe.db.sql(query, values, as_dict=True)
-
-	# --- Fetch child data for each document ---
-	for child_fieldname, child_fields in child_fields_map.items():
-		child_doctype = get_child_doctype(doctype, child_fieldname)
-		if not child_doctype:
-			continue
-
-		for doc in docs:
-			child_docs = frappe.get_all(
-				child_doctype,
-				fields=child_fields,
-				filters={
-					"parent": doc["name"],
-					"parentfield": child_fieldname,
-					"parenttype": doctype,
-				},
-				order_by="creation asc",
-			)
-			doc[child_fieldname] = child_docs
-
-	frappe.response.update({"data": docs})
+def evaluate_condition(doc_val, operator, value):
+    """Evaluate simple filter condition"""
+    if operator == "=":
+        return doc_val == value
+    if operator == "!=":
+        return doc_val != value
+    if operator == ">":
+        return doc_val > value
+    if operator == "<":
+        return doc_val < value
+    if operator == ">=":
+        return doc_val >= value
+    if operator == "<=":
+        return doc_val <= value
+    if operator.lower() == "in":
+        return doc_val in value
+    if operator.lower() == "like":
+        return value in doc_val if doc_val else False
+    return False
 
 
 def map_operator(op):
