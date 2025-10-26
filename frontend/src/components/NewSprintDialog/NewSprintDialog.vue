@@ -61,31 +61,12 @@ watch(showDialog, (val) => {
 })
 
 // --- Generate next sprint name dynamically based on project ---
-async function generateSprintName(projectId: string) {
-  if (!projectId) return `new-sprint-001`
-
-  const lastSprintResource = createResource({
-    url: '/api/method/frappe.client.get_list',
-    params: {
-      doctype: 'Sprint',
-      fields: ['title'],
-      filters: [
-        ['title', 'like', `${projectId}-sprint-%`],
-        ['project', '=', projectId]
-      ],
-      order_by: 'creation desc',
-      limit_page_length: 1,
-    },
-  })
-
-  const response = await lastSprintResource.fetch()
-  const lastTitle = response?.message?.[0]?.title || ''
-  const match = lastTitle.match(/-(\d+)$/)
-  const lastNumber = match ? parseInt(match[1], 10) : 0
-  const nextNumber = String(lastNumber + 1).padStart(3, '0')
-
-  return `${projectId}-sprint-${nextNumber}`
+async function getNextSprintName(projectId: string) {
+  const res = await fetch(`/api/method/gameplan.gameplan.doctype.sprint.sprint.get_next_sprint_number?project=${projectId}`)
+  const data = await res.json()
+ return data.message
 }
+
 
 // --- Create Sprint ---
 async function onCreateClick(e?: KeyboardEvent) {
@@ -100,10 +81,12 @@ async function onCreateClick(e?: KeyboardEvent) {
   if (project && typeof project === 'object') {
     newSprint.value.doc.project = project.value
   }
-
+ const projectId = typeof newSprint.value.doc.project === 'object'
+    ? newSprint.value.doc.project.value
+    : newSprint.value.doc.project
   // Auto-generate sprint name
-  const sprintName = await generateSprintName(newSprint.value.doc.project)
-  newSprint.value.doc.title = sprintName
+  const sprintName = await getNextSprintName(projectId)
+  newSprint.value.doc.title = newSprint.value.doc.title
   newSprint.value.doc.sprint_name = sprintName
 
   // Submit the doc

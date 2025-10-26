@@ -42,3 +42,12 @@ def get_list(
 		limit_page_length=limit + 1,
 	)
 	return sprint
+
+@frappe.whitelist()
+def get_next_sprint_number(project):
+    project_name = frappe.get_value("GP Project", {"name": project}, "title")
+    number = frappe.db.count("Sprint", filters={"project": project}) + 1  
+    sprint_number = str(number).zfill(3)
+    sprint_name = f"{project_name}-sprint-{sprint_number}"
+    return sprint_name
+
