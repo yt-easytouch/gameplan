@@ -13,7 +13,7 @@
   "column_break_ltnf",
   "status",
   "start_date",
-  "end_date",
+  "due_date",
   "section_break_olug",
   "sprint_goal",
   "section_break_derj",
@@ -46,11 +46,6 @@
    "fieldname": "start_date",
    "fieldtype": "Date",
    "label": "Start Date"
-  },
-  {
-   "fieldname": "end_date",
-   "fieldtype": "Date",
-   "label": "End Date"
   },
   {
    "fieldname": "section_break_olug",
@@ -120,12 +115,17 @@
    "fieldtype": "Data",
    "label": "Title",
    "reqd": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-18 12:56:00.210424",
+ "modified": "2025-10-25 16:21:43.521575",
  "modified_by": "Administrator",
  "module": "Gameplan",
  "name": "Sprint",

@@ -46,10 +46,21 @@ let router = createRouter({
       path: '/tasks',
       component: () => import('@/pages/MyTasks.vue'),
     },
+     {
+      name: 'MySprints',
+      path: '/sprints',
+      component: () => import('@/pages/MySprints.vue'),
+    },
     {
       name: 'Task',
       path: '/task/:taskId',
       component: () => import('@/pages/Task.vue'),
+      props: true,
+    },
+     {
+      name: 'Sprint',
+      path: '/sprint/:sprintId',
+      component: () => import('@/pages/Sprint.vue'),
       props: true,
     },
     {
@@ -131,9 +142,22 @@ let router = createRouter({
           props: true,
         },
         {
+          name: 'SpaceSprints',
+          path: 'sprints',
+          component: () => import('@/pages/SpaceSprints.vue'),
+          props: true,
+        },
+        {
           name: 'SpaceTask',
           path: 'tasks/:taskId',
           component: () => import('@/pages/Task.vue'),
+          props: true,
+          meta: { hideHeader: true },
+        },
+        {
+          name: 'SpaceSprint',
+          path: 'sprints/:sprintId',
+          component: () => import('@/pages/Sprint.vue'),
           props: true,
           meta: { hideHeader: true },
         },

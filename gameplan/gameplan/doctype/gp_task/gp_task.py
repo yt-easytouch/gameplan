@@ -107,7 +107,7 @@ class GPTask(HasMentions, HasActivity, Document):
 		GPNotification.clear_notifications(task=self.name)
 
 
-@frappe.whitelist(allow_guest = True)
+@frappe.whitelist()
 def get_list(
     fields: str = None,
     filters: str = None,
@@ -127,7 +127,7 @@ def get_list(
 	limit = int(limit)
 	query_filters = filters.copy()
 	if assigned_or_owner:
-		query_filters["assigned_to"] = assigned_or_owner
+		query_filters["owner"] = assigned_or_owner
 
 	tasks = frappe.get_all(
 		doctype,

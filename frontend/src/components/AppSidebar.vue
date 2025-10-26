@@ -183,6 +183,14 @@ const navigation = computed(() => {
       isActive: testRoute(/MyTasks|Task/g),
     },
     {
+      name: 'Sprints',
+      icon: LucideListTodo,
+      route: {
+        name: 'MySprints',
+      },
+      isActive: testRoute(/MySprints|Sprint/g),
+    },
+    {
       name: 'Pages',
       icon: LucideFiles,
       route: {

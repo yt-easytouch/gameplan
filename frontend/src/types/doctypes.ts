@@ -57,6 +57,37 @@ export interface GPTask extends DocType {
   task_collaborate: GPMember[];
 }
 
+export interface Sprint extends DocType {
+  /** Title */
+  title: string
+  /** Sprint Name (internal, unique) */
+  sprint_name?: string
+  /** Project */
+  project?: string
+  /** Project Name (fetched) */
+  project_name?: string
+  /** Status */
+  status?: 'Planned' | 'Active' | 'Completed' | 'Cancelled'
+  /** Start Date */
+  start_date?: string
+  /** Due Date */
+  due_date?: string
+  /** Sprint Goal */
+  sprint_goal?: string
+  /** Velocity Points */
+  velocity_points?: number
+  /** Progress in % */
+  progress?: number
+  /** Notes */
+  notes?: string
+  /** Team */
+  team?: string
+  /** Completed Points */
+  completed_points?: number
+  /** Burndown Chart (image) */
+  burndown_chart?: string
+  is_saved: 0 | 1
+}
 // Last updated: 2023-01-16 13:19:48.202430
 export interface GPUserProfile extends DocType {
   /** User: Link (User) */
