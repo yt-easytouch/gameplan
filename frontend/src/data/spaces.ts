@@ -37,22 +37,30 @@ export let spaces = useList<Space>({
     'discussions_count',
     { members: ['user'] },
   ],
-  filters:{"members.user":["in",user.name]},
+  filters: {},
   initialData: [],
   orderBy: 'title asc',
   limit: 99999,
   cacheKey: 'spaces',
   transform(data) {
-    for (let space of data) {
-      space.name = space.name.toString()
-    }
-    return data
+    // Safety check: ensure data is an array
+    if (!data || !Array.isArray(data)) return []
+
+    return data.map(space => ({
+      ...space,
+      name: space.name?.toString() || "", // optional chaining for safety
+    }))
   },
   immediate: true,
   onSuccess() {
-    unreadCount.submit()
+    unreadCount.submit();
   },
-})
+  onFetchError(err) {
+    console.error("Failed to fetch spaces:", err);
+    // Return empty array to prevent UI crash
+    return [];
+  },
+});
 
 export function useSpace(name: MaybeRefOrGetter<string | undefined>) {
   return computed(() => {

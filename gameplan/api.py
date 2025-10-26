@@ -552,12 +552,7 @@ import frappe, json
 
 @frappe.whitelist(allow_guest=False)
 def proxy_document():
-	"""
-	Proxy API that supports:
-	✅ Dynamic nested child tables in fields
-	✅ Filters on both parent and child tables
-	✅ Auto-detection of child doctypes via DocField metadata
-	"""
+
 
 	doctype = frappe.form_dict.get("parent")
 	fields_param = frappe.form_dict.get("fields")
@@ -566,15 +561,22 @@ def proxy_document():
 	start = int(frappe.form_dict.get("start") or 0)
 	limit = int(frappe.form_dict.get("limit") or 20)
 
-	# Parse filters JSON string
 	try:
 		filters = json.loads(filters_param) if filters_param else {}
 	except Exception:
 		filters = {}
 
-	# Parse fields, separate main fields and child table requests
+	if doctype == "Project":
+		user = frappe.session.user
+		parent_filters = {
+			"or": [
+				{"is_private": 0},
+				{"is_private": 1, "members.user": ["in", user]}
+			]
+		}
+
 	fields = []
-	child_fields_map = {}  # { child_fieldname: [list_of_fields] }
+	child_fields_map = {}  
 
 	if fields_param:
 		try:
@@ -591,7 +593,6 @@ def proxy_document():
 	else:
 		fields = ["name"]
 
-	# Helper to find child doctype for a fieldname
 	def get_child_doctype(parent_doctype, child_fieldname):
 		return frappe.db.get_value(
 			"DocField",
