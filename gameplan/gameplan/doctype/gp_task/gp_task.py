@@ -114,61 +114,108 @@ def get_list(
     order_by: str = None,
     start: int = 0,
     limit: int = 20,
-    group_by: str = None,
     parent: str = None,
     debug=False,
 ):
+	"""Get GP Tasks with OR logic (owner/assigned/collaborator), optional project title, and sub-task counts."""
+
 	doctype = "GP Task"
+	user = frappe.session.user
 	check_permissions(doctype, parent)
 
 	fields = frappe.parse_json(fields) if fields else None
 	filters = frappe.parse_json(filters) if filters else {}
 	assigned_or_owner = filters.pop("assigned_or_owner", None)
 	limit = int(limit)
-	query_filters = filters.copy()
-	if assigned_or_owner:
-		query_filters["owner"] = assigned_or_owner
 
-	tasks = frappe.get_all(
-		doctype,
-		fields=fields or ["name", "subject", "status", "owner"],
-		filters=query_filters,
-		order_by=order_by,
-		limit_start=start,
-		limit_page_length=limit + 1,
+	# --- Base fields ---
+	task_columns = ["name", "title", "status", "owner", "assigned_to", "project"]
+	select_fields = ", ".join([f"t.`{col}`" for col in task_columns])
+
+	# Optional project title
+	include_project_title = fields and "project.title" in fields
+	if include_project_title:
+		select_fields += ", p.title AS project_title"
+		join_project = "LEFT JOIN `tabProject` p ON t.project = p.name"
+	else:
+		join_project = ""
+
+	# --- Additional AND filters ---
+	where_clauses = ["1=1"]
+	values = []
+	for key, val in filters.items():
+		if isinstance(val, list) and len(val) == 2:
+			op, v = val
+			if op.lower() == "like":
+				where_clauses.append(f"t.`{key}` LIKE %s")
+			else:
+				where_clauses.append(f"t.`{key}` = %s")
+			values.append(v)
+		else:
+			where_clauses.append(f"t.`{key}` = %s")
+			values.append(val)
+
+	# --- OR logic for access ---
+	or_conditions = ["t.owner = %s"]
+	values.append(user)
+
+	if frappe.db.has_column(doctype, "assigned_to"):
+		or_conditions.append("t.assigned_to = %s")
+		values.append(user)
+
+	# Collaborators
+	collab_task_names = frappe.get_all(
+		"GP Member",
+		filters={"user": user},  # adjust field if needed
+		pluck="parent"
 	)
+	if collab_task_names:
+		placeholders = ", ".join(["%s"] * len(collab_task_names))
+		or_conditions.append(f"t.name IN ({placeholders})")
+		values.extend(collab_task_names)
 
+	where_clauses.append("(" + " OR ".join(or_conditions) + ")")
+
+	# --- Build final SQL ---
+	sql = f"""
+		SELECT {select_fields}
+		FROM `tab{doctype}` t
+		{join_project}
+		WHERE {" AND ".join(where_clauses)}
+	"""
+	if order_by:
+		sql += f" ORDER BY {order_by}"
+	sql += f" LIMIT {start}, {limit + 1}"
+
+	if debug:
+		frappe.log_error(sql + "\n" + str(values), "get_list SQL Debug")
+
+	# --- Execute SQL ---
+	tasks = frappe.db.sql(sql, values, as_dict=True)
 	task_names = [t["name"] for t in tasks]
 
+	# --- Sub-task counts ---
 	if task_names:
-		total_sub_tasks = frappe.get_all(
-			"GP Sub Task",
-			fields=["parent", "COUNT(*) as total"],
-			filters={"parent": ["in", task_names]},
-			group_by="parent"
-		)
+		total_sub_tasks = frappe.db.sql("""
+			SELECT parent, COUNT(*) as total
+			FROM `tabGP Sub Task`
+			WHERE parent IN ({})
+			GROUP BY parent
+		""".format(", ".join(["%s"] * len(task_names))), task_names, as_dict=True)
 
-		done_sub_tasks = frappe.get_all(
-			"GP Sub Task",
-			fields=["parent", "COUNT(*) as done"],
-			filters={
-				"parent": ["in", task_names],
-				"status": "Done"
-			},
-			group_by="parent"
-		)
+		done_sub_tasks = frappe.db.sql("""
+			SELECT parent, COUNT(*) as done
+			FROM `tabGP Sub Task`
+			WHERE parent IN ({}) AND status = 'Done'
+			GROUP BY parent
+		""".format(", ".join(["%s"] * len(task_names))), task_names, as_dict=True)
 
-		# Convert to dict for lookup
 		total_map = {t["parent"]: t["total"] for t in total_sub_tasks}
 		done_map = {t["parent"]: t["done"] for t in done_sub_tasks}
 
-		# Merge stats into tasks
 		for t in tasks:
-			name = t["name"]
-			total = total_map.get(str(name), 0)
-			done = done_map.get(str(name), 0)
-			t["total_sub_tasks"] = total
-			t["done_sub_tasks"] = done
+			t["total_sub_tasks"] = total_map.get(t["name"], 0)
+			t["done_sub_tasks"] = done_map.get(t["name"], 0)
 
 	frappe.response["has_next_page"] = len(tasks) > limit
 	return tasks[:limit]
